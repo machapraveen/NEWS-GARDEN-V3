@@ -10,10 +10,9 @@ import {
   type Channel,
 } from '@/data/newsChannels';
 import { Search, X, ChevronDown, ChevronUp, Play, Pause, RotateCcw } from 'lucide-react';
+import IndiaMapOverlay from './IndiaMapOverlay';
 
 const WORLD_ATLAS_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
-const INDIA_STATES_URL = 'https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson';
-
 interface GeoFeature {
   type: string;
   properties: Record<string, unknown>;
@@ -29,45 +28,6 @@ interface GeoCollection {
   features: GeoFeature[];
 }
 
-// Map GeoJSON state names to our newsChannels.ts state names
-const STATE_NAME_MAP: Record<string, string> = {
-  'Andhra Pradesh': 'Andhra Pradesh',
-  'Arunachal Pradesh': 'Arunachal Pradesh',
-  'Assam': 'Assam',
-  'Bihar': 'Bihar',
-  'Chhattisgarh': 'Chhattisgarh',
-  'Goa': 'Goa',
-  'Gujarat': 'Gujarat',
-  'Haryana': 'Haryana',
-  'Himachal Pradesh': 'Himachal Pradesh',
-  'Jharkhand': 'Jharkhand',
-  'Karnataka': 'Karnataka',
-  'Kerala': 'Kerala',
-  'Madhya Pradesh': 'Madhya Pradesh',
-  'Maharashtra': 'Maharashtra',
-  'Manipur': 'Manipur',
-  'Meghalaya': 'Meghalaya',
-  'Mizoram': 'Mizoram',
-  'Nagaland': 'Nagaland',
-  'Odisha': 'Odisha',
-  'Orissa': 'Odisha',
-  'Punjab': 'Punjab',
-  'Rajasthan': 'Rajasthan',
-  'Sikkim': 'Sikkim',
-  'Tamil Nadu': 'Tamil Nadu',
-  'Telangana': 'Telangana',
-  'Tripura': 'Tripura',
-  'Uttar Pradesh': 'Uttar Pradesh',
-  'Uttarakhand': 'Uttarakhand',
-  'Uttaranchal': 'Uttarakhand',
-  'West Bengal': 'West Bengal',
-  'Jammu & Kashmir': 'Jammu & Kashmir',
-  'Jammu and Kashmir': 'Jammu & Kashmir',
-  'Ladakh': 'Ladakh',
-  'NCT of Delhi': 'Delhi',
-  'Delhi': 'Delhi',
-};
-
 export default function NewsChannelsGlobe() {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,8 +39,6 @@ export default function NewsChannelsGlobe() {
   const [isDragging, setIsDragging] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
   const [showIndia, setShowIndia] = useState(false);
-  const [indiaGeoData, setIndiaGeoData] = useState<GeoCollection | null>(null);
-  const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [globeSize, setGlobeSize] = useState(520);
   const animRef = useRef<number | null>(null);
@@ -116,18 +74,6 @@ export default function NewsChannelsGlobe() {
       })
       .catch((err) => console.error('Failed to load world atlas:', err));
   }, []);
-
-  // Load India states GeoJSON when India is selected
-  useEffect(() => {
-    if (showIndia && !indiaGeoData) {
-      fetch(INDIA_STATES_URL)
-        .then((r) => r.json())
-        .then((data: GeoCollection) => {
-          setIndiaGeoData(data);
-        })
-        .catch((err) => console.error('Failed to load India states:', err));
-    }
-  }, [showIndia, indiaGeoData]);
 
   // Auto-rotation
   useEffect(() => {
@@ -235,16 +181,16 @@ export default function NewsChannelsGlobe() {
     const name = getCountryName(feature);
     const data = NEWS_CHANNELS[name];
     if (data) {
+      if (name === 'India') {
+        // Open full-screen India overlay instead of sidebar
+        setShowIndia(true);
+        setAutoRotate(false);
+        return;
+      }
       setSelectedCountry(name);
       setSelectedState(null);
-      setShowIndia(name === 'India');
-      setHoveredState(null);
+
       setSearchQuery('');
-      // Center globe on India when clicked
-      if (name === 'India') {
-        setRotation([-78, -20, 0]); // Center on India (longitude negated for d3 rotation)
-        setAutoRotate(false);
-      }
     }
   }, []);
 
@@ -252,7 +198,6 @@ export default function NewsChannelsGlobe() {
     setSelectedCountry(null);
     setShowIndia(false);
     setSelectedState(null);
-    setHoveredState(null);
     setSearchQuery('');
   }, []);
 
@@ -412,47 +357,6 @@ export default function NewsChannelsGlobe() {
               );
             })}
 
-            {/* India State Overlay — shown when India is selected */}
-            {showIndia && indiaGeoData?.features?.map((feature, i) => {
-              const rawName = (feature.properties?.NAME_1 || feature.properties?.name || feature.properties?.NAME || feature.properties?.st_nm || '') as string;
-              const stateName = STATE_NAME_MAP[rawName] || rawName;
-              const hasChannels = !!(NEWS_CHANNELS.India?.states?.[stateName]);
-              const isStateSelected = selectedState === stateName;
-              const isStateHovered = hoveredState === stateName;
-              const path = pathGenerator(feature);
-              if (!path) return null;
-
-              return (
-                <path
-                  key={`india-state-${i}`}
-                  d={path}
-                  fill={
-                    isStateSelected
-                      ? '#FF6B35'
-                      : isStateHovered && hasChannels
-                      ? '#4ECDC4'
-                      : hasChannels
-                      ? 'rgba(255,107,53,0.45)'
-                      : 'rgba(255,107,53,0.15)'
-                  }
-                  stroke={isStateSelected ? '#FF6B35' : 'rgba(255,255,255,0.35)'}
-                  strokeWidth={isStateSelected ? 1.5 : 0.8}
-                  style={{
-                    cursor: hasChannels ? 'pointer' : 'default',
-                    transition: 'fill 0.2s',
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (hasChannels) {
-                      setSelectedState(isStateSelected ? null : stateName);
-                    }
-                  }}
-                  onMouseEnter={() => setHoveredState(stateName)}
-                  onMouseLeave={() => setHoveredState(null)}
-                />
-              );
-            })}
-
             {/* Atmosphere glow ring */}
             <circle
               cx={globeSize / 2}
@@ -465,34 +369,17 @@ export default function NewsChannelsGlobe() {
           </svg>
 
           {/* Hover tooltip */}
-          {(hoveredCountry || (showIndia && hoveredState)) && !isDragging && (
+          {hoveredCountry && !isDragging && (
             <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 rounded-lg border border-white/10 bg-black/80 px-4 py-2 text-[13px] font-semibold backdrop-blur-sm">
-              {showIndia && hoveredState ? (
-                <>
-                  {hoveredState}, India
-                  {NEWS_CHANNELS.India?.states?.[hoveredState] && (
-                    <span className="ml-2 text-primary">
-                      {NEWS_CHANNELS.India.states[hoveredState].length} channel
-                      {NEWS_CHANNELS.India.states[hoveredState].length !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                  {!NEWS_CHANNELS.India?.states?.[hoveredState] && (
-                    <span className="ml-2 text-muted-foreground text-xs">No channels yet</span>
-                  )}
-                </>
-              ) : hoveredCountry ? (
-                <>
-                  {hoveredCountry}
-                  {NEWS_CHANNELS[hoveredCountry] && (
-                    <span className="ml-2 text-primary">
-                      {NEWS_CHANNELS[hoveredCountry].channels?.length || 0} channel
-                      {(NEWS_CHANNELS[hoveredCountry].channels?.length || 0) !== 1 ? 's' : ''}
-                      {NEWS_CHANNELS[hoveredCountry].states &&
-                        ` + ${Object.keys(NEWS_CHANNELS[hoveredCountry].states!).length} states`}
-                    </span>
-                  )}
-                </>
-              ) : null}
+              {hoveredCountry}
+              {NEWS_CHANNELS[hoveredCountry] && (
+                <span className="ml-2 text-primary">
+                  {NEWS_CHANNELS[hoveredCountry].channels?.length || 0} channel
+                  {(NEWS_CHANNELS[hoveredCountry].channels?.length || 0) !== 1 ? 's' : ''}
+                  {NEWS_CHANNELS[hoveredCountry].states &&
+                    ` + ${Object.keys(NEWS_CHANNELS[hoveredCountry].states!).length} states`}
+                </span>
+              )}
             </div>
           )}
 
@@ -667,6 +554,11 @@ export default function NewsChannelsGlobe() {
           <span>{Object.keys(NEWS_CHANNELS.India?.states || {}).length} Indian States</span>
         </div>
       </div>
+
+      {/* Full-screen India Map Overlay */}
+      {showIndia && (
+        <IndiaMapOverlay onClose={() => { setShowIndia(false); setSelectedState(null); }} />
+      )}
     </div>
   );
 }
