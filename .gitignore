@@ -31,3 +31,12 @@ dist-ssr
 # Playwright
 test-results/
 playwright-report/
+
+# TypeScript
+*.tsbuildinfo
+
+# Supabase temp
+supabase/.temp/
+
+# Misc
+.mcp.json
