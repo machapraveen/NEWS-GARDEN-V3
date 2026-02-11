@@ -93,6 +93,46 @@ export async function analyzeCredibility(article: NewsArticle) {
   return data;
 }
 
+// ─── State Daily News ───
+export interface StateNewsItem {
+  state: string;
+  title: string;
+  description: string;
+  url: string;
+  imageUrl: string;
+  source: string;
+  publishedAt: string;
+}
+
+let stateNewsCache: { data: StateNewsItem[]; ts: number } | null = null;
+const STATE_NEWS_CACHE_MS = 60 * 60 * 1000; // 1 hour client-side cache
+
+export async function fetchStateNews(forceRefresh = false): Promise<StateNewsItem[]> {
+  // Client-side cache
+  if (!forceRefresh && stateNewsCache && Date.now() - stateNewsCache.ts < STATE_NEWS_CACHE_MS) {
+    return stateNewsCache.data;
+  }
+
+  try {
+    const data = await callEdgeFunction('fetch-state-news', { forceRefresh });
+    const items: StateNewsItem[] = (data?.stateNews || []).map((s: any) => ({
+      state: s.state,
+      title: s.title,
+      description: s.description,
+      url: s.url,
+      imageUrl: s.imageUrl || s.image_url || '',
+      source: s.source,
+      publishedAt: s.publishedAt || s.published_at || '',
+    }));
+    stateNewsCache = { data: items, ts: Date.now() };
+    console.log(`State news: ${items.length} states (cached: ${data?.cached})`);
+    return items;
+  } catch (err) {
+    console.error('Failed to fetch state news:', err);
+    return stateNewsCache?.data || [];
+  }
+}
+
 // Generate a content hash to detect if news actually changed
 export function generateContentHash(articles: NewsArticle[]): string {
   const titles = articles.map(a => a.headline).sort().join('|');

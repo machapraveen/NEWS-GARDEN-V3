@@ -4,10 +4,10 @@ import NewsPanel from "@/components/NewsPanel";
 import GlobeControls from "@/components/GlobeControls";
 import NewsVerifier from "@/components/NewsVerifier";
 import { GlobeMarker, Category, getGlobeMarkers, NewsArticle } from "@/data/mockNews";
-import { fetchAndAnalyzeNews, filterArticlesByCategory, generateContentHash } from "@/lib/api/news";
+import { fetchAndAnalyzeNews, filterArticlesByCategory, generateContentHash, fetchStateNews, type StateNewsItem } from "@/lib/api/news";
 import { getCachedNews, setCachedNews, clearCache, getCacheEntry, CACHE_DURATION } from "@/lib/newsCache";
 import { Link } from "react-router-dom";
-import { BarChart3, Loader2, RefreshCw, CheckCircle2, Globe2, TrendingUp, Newspaper, Clock, MapPin, Shield } from "lucide-react";
+import { BarChart3, Loader2, RefreshCw, CheckCircle2, Globe2, TrendingUp, Newspaper, Clock, MapPin, Shield, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +24,7 @@ const Index = () => {
   const [lastChangedAt, setLastChangedAt] = useState<Date | null>(null);
   const lastChangedAtRef = useRef<Date | null>(null);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
+  const [stateNews, setStateNews] = useState<StateNewsItem[]>([]);
   const { toast } = useToast();
 
   // Filtered articles derived locally from allArticles — NO API call on category change
@@ -92,6 +93,7 @@ const Index = () => {
   // Load once on mount
   useEffect(() => {
     loadNews(false);
+    fetchStateNews().then(setStateNews).catch(() => {});
   }, [loadNews]);
 
   // Auto-refresh timer
@@ -334,6 +336,57 @@ const Index = () => {
               ))}
             </div>
           </section>
+
+          {/* Indian State News - Daily Top Stories */}
+          {stateNews.length > 0 && (
+            <section className="max-w-6xl mx-auto px-4 py-12 border-t border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-6">
+                <MapPin className="w-5 h-5 text-[#FF6B35]" />
+                <h2 className="font-display text-base font-bold tracking-wider text-[#FF6B35]">INDIA — STATE NEWS</h2>
+                <span className="text-xs text-muted-foreground ml-2">Today's top story from each state</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {stateNews.slice(0, 12).map((news) => (
+                  <a
+                    key={news.state}
+                    href={news.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 hover:bg-white/[0.05] hover:border-[#FF6B35]/20 transition-all"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF6B35]/15 text-[#FF6B35] px-2 py-0.5 rounded">
+                        {news.state}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{news.source}</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-[#FF6B35] transition-colors leading-snug line-clamp-2">
+                      {news.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{news.description}</p>
+                    <div className="flex items-center justify-between mt-2 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {new Date(news.publishedAt).toLocaleDateString()}
+                      </span>
+                      <span className="flex items-center gap-1 text-[#FF6B35] opacity-0 group-hover:opacity-100 transition-opacity">
+                        Read <ExternalLink className="w-2.5 h-2.5" />
+                      </span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+              {stateNews.length > 12 && (
+                <div className="mt-4 text-center">
+                  <Link to="/channels">
+                    <Button variant="outline" size="sm" className="glass border-[#FF6B35]/30 text-[#FF6B35] hover:bg-[#FF6B35]/10">
+                      View all {stateNews.length} states on India Map
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* News Verification Tool */}
           <section className="max-w-6xl mx-auto px-4 py-12 border-t border-white/[0.06]">

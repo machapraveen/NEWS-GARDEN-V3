@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
-import { ArrowLeft, Search, X, Play, Tv } from 'lucide-react';
+import { ArrowLeft, Search, X, Play, Tv, Newspaper, ExternalLink } from 'lucide-react';
 import { NEWS_CHANNELS, type Channel } from '@/data/newsChannels';
+import { fetchStateNews, type StateNewsItem } from '@/lib/api/news';
 
 // District-level GeoJSON with modern boundaries (includes Telangana, Ladakh, etc.)
 const INDIA_DISTRICTS_URL = 'https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@ef25ebc/geojson/india.geojson';
@@ -83,6 +84,12 @@ export default function IndiaMapOverlay({ onClose }: IndiaMapOverlayProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [animPhase, setAnimPhase] = useState<'enter' | 'visible' | 'exit'>('enter');
   const [mapSize, setMapSize] = useState({ width: 800, height: 700 });
+  const [stateNews, setStateNews] = useState<StateNewsItem[]>([]);
+
+  // Load state daily news
+  useEffect(() => {
+    fetchStateNews().then(setStateNews).catch(() => {});
+  }, []);
 
   // Load India GeoJSON (district-level, grouped by state)
   useEffect(() => {
@@ -381,6 +388,47 @@ export default function IndiaMapOverlay({ onClose }: IndiaMapOverlayProps) {
                 </button>
               </div>
             </div>
+
+            {/* Today's Top News */}
+            {(() => {
+              const news = stateNews.find((n) => n.state === selectedState);
+              if (!news) return null;
+              return (
+                <div className="border-b border-white/[0.06] p-5">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <Newspaper className="h-3.5 w-3.5 text-amber-400" />
+                    <span className="text-[11px] font-bold uppercase tracking-[1.5px] text-amber-400">
+                      Today's Top News
+                    </span>
+                  </div>
+                  <a
+                    href={news.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.08]"
+                  >
+                    {news.imageUrl && (
+                      <img
+                        src={news.imageUrl}
+                        alt=""
+                        className="mb-2.5 h-32 w-full rounded-md object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
+                    <h3 className="text-sm font-semibold leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                      {news.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{news.description}</p>
+                    <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>{news.source}</span>
+                      <span className="flex items-center gap-1 text-primary">
+                        Read <ExternalLink className="h-2.5 w-2.5" />
+                      </span>
+                    </div>
+                  </a>
+                </div>
+              );
+            })()}
 
             {/* Channels */}
             <div className="p-5">
