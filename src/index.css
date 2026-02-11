@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 220 25% 6%;
+    --foreground: 200 20% 92%;
+
+    --card: 220 20% 10%;
+    --card-foreground: 200 20% 92%;
+
+    --popover: 220 20% 10%;
+    --popover-foreground: 200 20% 92%;
+
+    --primary: 174 72% 46%;
+    --primary-foreground: 220 25% 6%;
+
+    --secondary: 220 18% 16%;
+    --secondary-foreground: 200 20% 85%;
+
+    --muted: 220 15% 14%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 210 80% 55%;
+    --accent-foreground: 220 25% 6%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 174 72% 46%;
+
+    --radius: 0.75rem;
+
+    --sentiment-positive: 142 70% 45%;
+    --sentiment-negative: 0 72% 51%;
+    --sentiment-neutral: 45 90% 55%;
+
+    --glow-primary: 174 72% 46%;
+    --glow-accent: 210 80% 55%;
+
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 200 20% 85%;
+    --sidebar-primary: 174 72% 46%;
+    --sidebar-primary-foreground: 220 25% 6%;
+    --sidebar-accent: 220 15% 14%;
+    --sidebar-accent-foreground: 200 20% 85%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 174 72% 46%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glow-primary {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3), 0 0 60px hsl(var(--primary) / 0.1);
+  }
+  .glow-accent {
+    box-shadow: 0 0 20px hsl(var(--accent) / 0.3), 0 0 60px hsl(var(--accent) / 0.1);
+  }
+  .text-glow {
+    text-shadow: 0 0 10px hsl(var(--primary) / 0.5), 0 0 40px hsl(var(--primary) / 0.2);
+  }
+  .glass {
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+}
