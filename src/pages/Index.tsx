@@ -6,7 +6,7 @@ import { GlobeMarker, Category, getGlobeMarkers, NewsArticle } from "@/data/mock
 import { fetchAndAnalyzeNews, filterArticlesByCategory, generateContentHash } from "@/lib/api/news";
 import { getCachedNews, setCachedNews, clearCache, getCacheEntry, CACHE_DURATION } from "@/lib/newsCache";
 import { Link } from "react-router-dom";
-import { BarChart3, Loader2, RefreshCw, CheckCircle2 } from "lucide-react";
+import { BarChart3, Loader2, RefreshCw, CheckCircle2, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -187,12 +187,18 @@ const Index = () => {
         )}
       </div>
 
-      {/* Dashboard link */}
-      <div className="fixed bottom-4 left-4 z-50">
+      {/* Navigation links */}
+      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2">
         <Link to="/dashboard" state={{ articles: allArticles }}>
           <Button variant="outline" size="sm" className="glass border-border/30">
             <BarChart3 className="w-4 h-4 mr-1.5" />
             Dashboard
+          </Button>
+        </Link>
+        <Link to="/channels">
+          <Button variant="outline" size="sm" className="glass border-border/30">
+            <Globe2 className="w-4 h-4 mr-1.5" />
+            Channels
           </Button>
         </Link>
       </div>
