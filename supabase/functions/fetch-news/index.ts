@@ -70,12 +70,12 @@ async function getCachedArticles(supabase: any): Promise<AnalyzedArticle[] | nul
   console.log(`Last fetch: ${log.fetched_at}, hours ago: ${hoursSinceLastFetch.toFixed(2)}`);
   if (hoursSinceLastFetch >= CACHE_HOURS) return null;
 
-  // Fetch the most recent 50 articles (ordered by when they were stored)
+  // Fetch the most recent 100 articles (ordered by when they were stored)
   const { data: articles, error } = await supabase
     .from('news_articles')
     .select('*')
     .order('fetched_at', { ascending: false })
-    .limit(50);
+    .limit(100);
 
   if (error) { console.error('Cache read error:', error); return null; }
   if (!articles || articles.length === 0) return null;
@@ -229,17 +229,43 @@ async function fetchGDELT(query?: string, max = 50): Promise<RawArticle[]> {
   }
 }
 
-// ─── Multi-region fetch: 4 parallel GNews calls + GDELT enrichment ───
-async function fetchMultiRegion(apiKey: string): Promise<{ articles: RawArticle[]; source: string }> {
+// ─── Read state news from DB and convert to RawArticle format ───
+async function getStateNewsAsRaw(supabase: any): Promise<RawArticle[]> {
+  try {
+    const { data, error } = await supabase
+      .from('state_daily_news')
+      .select('*')
+      .order('state', { ascending: true });
+
+    if (error || !data || data.length === 0) return [];
+
+    return data.map((d: any) => ({
+      title: d.title || '',
+      description: d.description || '',
+      content: d.description || d.title || '',
+      url: d.url || '',
+      image: d.image_url || '',
+      publishedAt: d.published_at || new Date().toISOString(),
+      source: { name: d.source || 'Unknown', url: '' },
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ─── Multi-region fetch: 5 parallel calls for ~100 articles ───
+async function fetchMultiRegion(apiKey: string, supabase: any): Promise<{ articles: RawArticle[]; source: string }> {
   const fetches = [
-    // 1. Global top headlines
-    fetchGNews(apiKey, undefined, 25),
+    // 1. Global top headlines (max 100)
+    fetchGNews(apiKey, undefined, 100),
     // 2. India news
-    fetchGNews(apiKey, undefined, 25, 'in'),
+    fetchGNews(apiKey, undefined, 10, 'in'),
     // 3. Regional diversity via search
-    fetchGNews(apiKey, 'world news', 25),
+    fetchGNews(apiKey, 'world news', 10),
     // 4. GDELT enrichment for cross-source coverage
     fetchGDELT('world news', 50),
+    // 5. State news from DB (already fetched daily by fetch-state-news)
+    getStateNewsAsRaw(supabase),
   ];
 
   const results = await Promise.allSettled(fetches);
@@ -249,7 +275,7 @@ async function fetchMultiRegion(apiKey: string): Promise<{ articles: RawArticle[
   results.forEach((result, i) => {
     if (result.status === 'fulfilled' && result.value.length > 0) {
       allArticles.push(...result.value);
-      sources.push(i < 3 ? 'GNews' : 'GDELT');
+      sources.push(i < 3 ? 'GNews' : i === 3 ? 'GDELT' : 'StateNews');
     }
   });
 
@@ -392,7 +418,7 @@ serve(async (req) => {
         newsSource = 'GNews';
       } else {
         // For default feed, use multi-region strategy for geographic diversity
-        const result = await fetchMultiRegion(GNEWS_API_KEY);
+        const result = await fetchMultiRegion(GNEWS_API_KEY, supabase);
         rawArticles = result.articles;
         newsSource = result.source;
       }
@@ -410,18 +436,25 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Sending ${rawArticles.length} articles to Gemini for analysis`);
+    console.log(`Sending ${rawArticles.length} articles to Gemini for analysis (batched)`);
 
-    // 3. Analyze with Gemini
+    // 3. Analyze with Gemini in batches of 25
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     let analyses: any[] = [];
     if (GEMINI_API_KEY) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        analyses = await analyzeWithGemini(rawArticles, GEMINI_API_KEY);
-        if (analyses.length > 0) break;
-        const wait = Math.pow(2, attempt + 1) * 2000;
-        console.warn(`Analysis retry ${attempt + 1}, waiting ${wait}ms...`);
-        await new Promise(r => setTimeout(r, wait));
+      const BATCH_SIZE = 25;
+      for (let batchStart = 0; batchStart < rawArticles.length; batchStart += BATCH_SIZE) {
+        const batch = rawArticles.slice(batchStart, batchStart + BATCH_SIZE);
+        let batchAnalyses: any[] = [];
+        for (let attempt = 0; attempt < 3; attempt++) {
+          batchAnalyses = await analyzeWithGemini(batch, GEMINI_API_KEY);
+          if (batchAnalyses.length > 0) break;
+          const wait = Math.pow(2, attempt + 1) * 2000;
+          console.warn(`Batch ${batchStart / BATCH_SIZE + 1} retry ${attempt + 1}, waiting ${wait}ms...`);
+          await new Promise(r => setTimeout(r, wait));
+        }
+        analyses.push(...batchAnalyses);
+        console.log(`Analyzed batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(rawArticles.length / BATCH_SIZE)}: ${batchAnalyses.length} results`);
       }
     }
 
