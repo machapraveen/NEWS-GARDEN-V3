@@ -1,5 +1,7 @@
-import { supabase } from "@/integrations/supabase/client";
 import type { NewsArticle, Sentiment, Category, NamedEntity } from "@/data/mockNews";
+
+const EDGE_URL = import.meta.env.VITE_EDGE_FUNCTIONS_URL;
+const EDGE_KEY = import.meta.env.VITE_EDGE_FUNCTIONS_KEY;
 
 interface GNewsArticle {
   title: string;
@@ -16,21 +18,37 @@ interface GNewsResponse {
   articles: GNewsArticle[];
 }
 
+// Call edge function via direct fetch
+async function callEdgeFunction(functionName: string, body: any): Promise<any> {
+  const response = await fetch(`${EDGE_URL}/${functionName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${EDGE_KEY}`,
+      'apikey': EDGE_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Edge function ${functionName} error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 // Single API call to fetch news (no category = general top headlines)
 async function fetchNewsFromAPI(
   query: string | null,
   max: number
 ): Promise<GNewsArticle[]> {
-  const { data, error } = await supabase.functions.invoke('fetch-news', {
-    body: { category: null, query, max },
-  });
-
-  if (error) {
+  try {
+    const data = await callEdgeFunction('fetch-news', { category: null, query, max });
+    return (data as GNewsResponse)?.articles || [];
+  } catch (error) {
     console.error('Error fetching news:', error);
     return [];
   }
-
-  return (data as GNewsResponse)?.articles || [];
 }
 
 // Main function: fetch ALL news once, analyze, and return
@@ -54,26 +72,17 @@ export async function fetchAndAnalyzeNews(
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-article', {
-        body: { articles: articlesForAnalysis, type: 'full-analysis' },
+      const data = await callEdgeFunction('analyze-article', {
+        articles: articlesForAnalysis,
+        type: 'full-analysis',
       });
-
-      if (error) {
-        if (attempt < 2) {
-          const wait = Math.pow(2, attempt + 1) * 2000;
-          console.warn(`Batch analysis rate limited, attempt ${attempt + 1}, retrying in ${wait}ms...`);
-          await new Promise(r => setTimeout(r, wait));
-          continue;
-        }
-        console.error('Batch analysis failed after retries:', error);
-        break;
-      }
 
       analyses = data?.results || [];
       break;
     } catch (err) {
       if (attempt < 2) {
         const wait = Math.pow(2, attempt + 1) * 2000;
+        console.warn(`Batch analysis rate limited, attempt ${attempt + 1}, retrying in ${wait}ms...`);
         await new Promise(r => setTimeout(r, wait));
         continue;
       }
@@ -100,16 +109,13 @@ export function filterArticlesByCategory(
 
 // Analyze a single article for credibility (used in ArticleDetail)
 export async function analyzeCredibility(article: NewsArticle) {
-  const { data, error } = await supabase.functions.invoke('analyze-article', {
-    body: {
-      title: article.headline,
-      description: article.summary,
-      content: article.fullText,
-      type: 'credibility',
-    },
+  const data = await callEdgeFunction('analyze-article', {
+    title: article.headline,
+    description: article.summary,
+    content: article.fullText,
+    type: 'credibility',
   });
 
-  if (error) throw new Error('Credibility analysis failed');
   return data;
 }
 
