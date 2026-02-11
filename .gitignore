@@ -40,3 +40,9 @@ supabase/.temp/
 
 # Misc
 .mcp.json
+
+# Test screenshots
+*.png
+
+# Frontend legacy
+frontend/
