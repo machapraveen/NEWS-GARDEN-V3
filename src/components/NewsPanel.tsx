@@ -117,9 +117,11 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
   const primaryArticle = markerArticles[0];
   if (!primaryArticle) return null;
 
-  // Build geographic levels from the articles
+  // Build all 6 geographic levels from the articles
   const levels = [
     { level: "City", name: primaryArticle.location.city, articles: articles.filter(a => a.location.city === primaryArticle.location.city) },
+    { level: "District", name: primaryArticle.location.district || primaryArticle.location.city, articles: articles.filter(a => (a.location.district || a.location.city) === (primaryArticle.location.district || primaryArticle.location.city)) },
+    { level: "State", name: primaryArticle.location.state || primaryArticle.location.country, articles: articles.filter(a => (a.location.state || a.location.country) === (primaryArticle.location.state || primaryArticle.location.country)) },
     { level: "Country", name: primaryArticle.location.country, articles: articles.filter(a => a.location.country === primaryArticle.location.country) },
     { level: "Continent", name: primaryArticle.location.continent, articles: articles.filter(a => a.location.continent === primaryArticle.location.continent) },
     { level: "World", name: "Global", articles: [...articles].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) },

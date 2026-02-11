@@ -55,8 +55,8 @@ export async function fetchAndAnalyzeNews(
       communityReports: 0,
       location: {
         city: a.location?.city || 'Unknown',
-        district: '',
-        state: '',
+        district: a.location?.district || a.location?.city || '',
+        state: a.location?.state || a.location?.country || '',
         country: a.location?.country || 'Unknown',
         continent: a.location?.continent || 'Unknown',
         lat: a.location?.lat || 0,

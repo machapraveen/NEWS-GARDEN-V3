@@ -178,12 +178,52 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
       ],
       'Manipur': [
         { name: 'ISTV Live', lang: 'Manipuri', url: 'https://www.youtube.com/@ISTVNetwork' },
+        { name: 'Impact TV Manipur', lang: 'Manipuri', url: 'https://www.youtube.com/@ImpactTVManipur' },
       ],
       'Jammu & Kashmir': [
         { name: 'Greater Kashmir TV', lang: 'Urdu/Hindi', url: 'https://www.youtube.com/@GreaterKashmirTV' },
+        { name: 'Kashmir Crown', lang: 'Urdu/Kashmiri', url: 'https://www.youtube.com/@KashmirCrown' },
       ],
       'Delhi': [
         { name: 'NDTV India (Delhi HQ)', lang: 'Hindi/English', url: 'https://www.youtube.com/@NDTVIndia' },
+        { name: 'Delhi Aaj Tak', lang: 'Hindi', url: 'https://www.youtube.com/@DelhiAajTak' },
+      ],
+      'Uttarakhand': [
+        { name: 'News18 UP Uttarakhand', lang: 'Hindi', url: 'https://www.youtube.com/@News18UPUttarakhand' },
+        { name: 'Uttarakhand Post', lang: 'Hindi', url: 'https://www.youtube.com/@UttarakhandPost' },
+      ],
+      'Chhattisgarh': [
+        { name: 'News18 MP Chhattisgarh', lang: 'Hindi', url: 'https://www.youtube.com/@News18MPCG' },
+        { name: 'IBC24 News', lang: 'Hindi', url: 'https://www.youtube.com/@iaborig' },
+      ],
+      'Jharkhand': [
+        { name: 'News18 Bihar Jharkhand', lang: 'Hindi', url: 'https://www.youtube.com/@News18BiharJharkhand' },
+        { name: 'Prabhat Khabar', lang: 'Hindi', url: 'https://www.youtube.com/@PrabhatKhabar' },
+      ],
+      'Himachal Pradesh': [
+        { name: 'Divya Himachal', lang: 'Hindi', url: 'https://www.youtube.com/@DivyaHimachal' },
+        { name: 'HP News', lang: 'Hindi', url: 'https://www.youtube.com/@HPNewsTV' },
+      ],
+      'Tripura': [
+        { name: 'Agartala News', lang: 'Bengali', url: 'https://www.youtube.com/@AgartalaNews' },
+      ],
+      'Meghalaya': [
+        { name: 'East Khasi Hills News', lang: 'English/Khasi', url: 'https://www.youtube.com/@MeghalayaNews' },
+      ],
+      'Mizoram': [
+        { name: 'LPS Vision', lang: 'Mizo', url: 'https://www.youtube.com/@LPSVision' },
+      ],
+      'Nagaland': [
+        { name: 'Nagaland Post', lang: 'English', url: 'https://www.youtube.com/@NagalandPost' },
+      ],
+      'Arunachal Pradesh': [
+        { name: 'DD Arunprabha', lang: 'English/Hindi', url: 'https://www.youtube.com/@DDArunprabha' },
+      ],
+      'Sikkim': [
+        { name: 'Sikkim Chronicle', lang: 'English/Nepali', url: 'https://www.youtube.com/@SikkimChronicle' },
+      ],
+      'Ladakh': [
+        { name: 'Reach Ladakh', lang: 'English/Ladakhi', url: 'https://www.youtube.com/@ReachLadakh' },
       ],
     },
   },
