@@ -75,7 +75,7 @@ export default function NewsChannelsGlobe() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
-  const [rotation, setRotation] = useState<[number, number, number]>([78, -20, 0]); // Start centered on India
+  const [rotation, setRotation] = useState<[number, number, number]>([-78, -20, 0]); // Start centered on India
   const [isDragging, setIsDragging] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
   const [showIndia, setShowIndia] = useState(false);
@@ -528,7 +528,7 @@ export default function NewsChannelsGlobe() {
             </button>
             <button
               onClick={() => {
-                setRotation([78, -20, 0]);
+                setRotation([-78, -20, 0]);
                 setAutoRotate(false);
               }}
               className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white/10"
