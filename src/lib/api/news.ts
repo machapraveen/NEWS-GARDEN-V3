@@ -3,21 +3,6 @@ import type { NewsArticle, Sentiment, Category, NamedEntity } from "@/data/mockN
 const EDGE_URL = import.meta.env.VITE_EDGE_FUNCTIONS_URL;
 const EDGE_KEY = import.meta.env.VITE_EDGE_FUNCTIONS_KEY;
 
-interface GNewsArticle {
-  title: string;
-  description: string;
-  content: string;
-  url: string;
-  image: string;
-  publishedAt: string;
-  source: { name: string; url: string };
-}
-
-interface GNewsResponse {
-  totalArticles: number;
-  articles: GNewsArticle[];
-}
-
 // Call edge function via direct fetch
 async function callEdgeFunction(functionName: string, body: any): Promise<any> {
   const response = await fetch(`${EDGE_URL}/${functionName}`, {
@@ -37,65 +22,54 @@ async function callEdgeFunction(functionName: string, body: any): Promise<any> {
   return response.json();
 }
 
-// Single API call to fetch news (no category = general top headlines)
-async function fetchNewsFromAPI(
-  query: string | null,
-  max: number
-): Promise<GNewsArticle[]> {
-  try {
-    const data = await callEdgeFunction('fetch-news', { category: null, query, max });
-    return (data as GNewsResponse)?.articles || [];
-  } catch (error) {
-    console.error('Error fetching news:', error);
-    return [];
-  }
-}
-
-// Main function: fetch ALL news once, analyze, and return
-// Category filtering happens on the client side after data is loaded
+// Main function: fetch analyzed news (server handles caching + analysis)
 export async function fetchAndAnalyzeNews(
   query?: string | null,
-  max: number = 25
+  max: number = 25,
+  forceRefresh: boolean = false
 ): Promise<NewsArticle[]> {
-  const gnewsArticles = await fetchNewsFromAPI(query || null, max);
+  try {
+    const data = await callEdgeFunction('fetch-news', {
+      query: query || null,
+      max,
+      forceRefresh,
+    });
 
-  if (!gnewsArticles.length) return [];
+    const articles = data?.articles || [];
+    console.log(`Received ${articles.length} articles (source: ${data?.source}, cached: ${data?.cached})`);
 
-  // Batch analyze all articles in a single AI call
-  const articlesForAnalysis = gnewsArticles.map(a => ({
-    title: a.title,
-    description: a.description,
-    content: (a.content || a.description || a.title).slice(0, 1500),
-  }));
-
-  let analyses: any[] = [];
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const data = await callEdgeFunction('analyze-article', {
-        articles: articlesForAnalysis,
-        type: 'full-analysis',
-      });
-
-      analyses = data?.results || [];
-      break;
-    } catch (err) {
-      if (attempt < 2) {
-        const wait = Math.pow(2, attempt + 1) * 2000;
-        console.warn(`Batch analysis rate limited, attempt ${attempt + 1}, retrying in ${wait}ms...`);
-        await new Promise(r => setTimeout(r, wait));
-        continue;
-      }
-      console.error('Batch analysis error:', err);
-    }
+    return articles.map((a: any, index: number) => ({
+      id: a.id || `article-${index}-${Date.now()}`,
+      headline: a.headline || a.title || '',
+      summary: a.summary || a.description || '',
+      fullText: a.fullText || a.content || a.summary || '',
+      source: a.source || 'Unknown',
+      sourceUrl: a.sourceUrl || a.url || '',
+      imageUrl: a.imageUrl || a.image || '',
+      timestamp: a.timestamp || a.publishedAt || new Date().toISOString(),
+      category: (a.category || 'Technology') as Category,
+      sentiment: (a.sentiment || 'neutral') as Sentiment,
+      sentimentScore: a.sentimentScore ?? 0.5,
+      credibilityScore: a.credibilityScore ?? 70,
+      bertConfidence: a.bertConfidence ?? 0.5,
+      communityReports: 0,
+      location: {
+        city: a.location?.city || 'Unknown',
+        district: '',
+        state: '',
+        country: a.location?.country || 'Unknown',
+        continent: a.location?.continent || 'Unknown',
+        lat: a.location?.lat || 0,
+        lng: a.location?.lng || 0,
+      },
+      entities: (a.entities || []) as NamedEntity[],
+      crossSources: [],
+      aiSummary: a.aiSummary || a.summary || '',
+    }));
+  } catch (err) {
+    console.error('Failed to fetch news:', err);
+    return [];
   }
-
-  return gnewsArticles.map((article, index) => {
-    const analysis = analyses[index];
-    return analysis
-      ? transformArticle(article, analysis, index)
-      : createFallbackArticle(article, index);
-  });
 }
 
 // Filter articles by category on the client side (no API call)
@@ -129,68 +103,4 @@ export function generateContentHash(articles: NewsArticle[]): string {
     hash |= 0;
   }
   return hash.toString(36);
-}
-
-function transformArticle(gnews: GNewsArticle, analysis: any, index: number): NewsArticle {
-  const location = analysis.location || { city: 'Unknown', country: 'Unknown', continent: 'Unknown', lat: 0, lng: 0 };
-
-  return {
-    id: `live-${index}-${Date.now()}`,
-    headline: gnews.title,
-    summary: gnews.description || '',
-    fullText: gnews.content || gnews.description || '',
-    source: gnews.source?.name || 'Unknown',
-    sourceUrl: gnews.url,
-    imageUrl: gnews.image,
-    timestamp: gnews.publishedAt,
-    category: (analysis.category || 'Technology') as Category,
-    sentiment: (analysis.sentiment || 'neutral') as Sentiment,
-    sentimentScore: analysis.sentimentScore ?? 0.5,
-    credibilityScore: analysis.credibilityScore ?? 70,
-    bertConfidence: 0.85,
-    communityReports: 0,
-    location: {
-      city: location.city || 'Unknown',
-      district: '',
-      state: '',
-      country: location.country || 'Unknown',
-      continent: location.continent || 'Unknown',
-      lat: location.lat || 0,
-      lng: location.lng || 0,
-    },
-    entities: (analysis.entities || []) as NamedEntity[],
-    crossSources: [],
-    aiSummary: analysis.aiSummary || gnews.description || '',
-  };
-}
-
-function createFallbackArticle(gnews: GNewsArticle, index: number): NewsArticle {
-  return {
-    id: `live-${index}-${Date.now()}`,
-    headline: gnews.title,
-    summary: gnews.description || '',
-    fullText: gnews.content || gnews.description || '',
-    source: gnews.source?.name || 'Unknown',
-    sourceUrl: gnews.url,
-    imageUrl: gnews.image,
-    timestamp: gnews.publishedAt,
-    category: 'Technology' as Category,
-    sentiment: 'neutral' as Sentiment,
-    sentimentScore: 0.5,
-    credibilityScore: 70,
-    bertConfidence: 0.5,
-    communityReports: 0,
-    location: {
-      city: 'Unknown',
-      district: '',
-      state: '',
-      country: 'Unknown',
-      continent: 'Unknown',
-      lat: 0,
-      lng: 0,
-    },
-    entities: [],
-    crossSources: [],
-    aiSummary: gnews.description || '',
-  };
 }

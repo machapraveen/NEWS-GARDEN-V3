@@ -46,7 +46,7 @@ const Index = () => {
     setLoading(true);
     setNoNewUpdates(false);
     try {
-      const data = await fetchAndAnalyzeNews(null, 25); // Single API call, no category
+      const data = await fetchAndAnalyzeNews(null, 25, forceRefresh); // Pass forceRefresh to server
       const newHash = generateContentHash(data);
 
       // Check if content actually changed
