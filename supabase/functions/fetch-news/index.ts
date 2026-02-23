@@ -17,6 +17,7 @@ interface RawArticle {
   image: string;
   publishedAt: string;
   source: { name: string; url: string };
+  _hint?: { country?: string; state?: string };
 }
 
 interface AnalyzedArticle {
@@ -195,6 +196,7 @@ async function fetchGNews(apiKey: string, query?: string, max = 25, country?: st
       image: a.image || '',
       publishedAt: a.publishedAt || new Date().toISOString(),
       source: { name: a.source?.name || 'Unknown', url: a.source?.url || '' },
+      _hint: country ? { country } : undefined,
     }));
   } catch (err) {
     console.error('GNews fetch error:', err);
@@ -247,6 +249,7 @@ async function getStateNewsAsRaw(supabase: any): Promise<RawArticle[]> {
       image: d.image_url || '',
       publishedAt: d.published_at || new Date().toISOString(),
       source: { name: d.source || 'Unknown', url: '' },
+      _hint: { country: 'in', state: d.state || '' },
     }));
   } catch {
     return [];
@@ -380,11 +383,146 @@ Return ONLY the JSON array. No markdown, no explanation.`;
   }
 }
 
-// ─── Combine raw articles + analysis into final format ───
+// ─── Lightweight metadata inference (no AI needed) ───
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Politics: ['president', 'minister', 'election', 'parliament', 'government', 'congress', 'senate', 'vote', 'political', 'trump', 'biden', 'modi', 'law', 'bill', 'policy', 'diplomat', 'sanction'],
+  Sports: ['cricket', 'football', 'soccer', 'tennis', 'nba', 'nfl', 'ipl', 'match', 'tournament', 'championship', 'olympic', 'goal', 'player', 'coach', 'league', 'cup', 'fifa', 'rugby'],
+  Health: ['health', 'medical', 'hospital', 'vaccine', 'disease', 'doctor', 'patient', 'cancer', 'drug', 'treatment', 'mental', 'covid', 'who', 'pandemic', 'outbreak', 'therapy'],
+  Science: ['nasa', 'space', 'mars', 'moon', 'rocket', 'satellite', 'research', 'scientist', 'discovery', 'physics', 'quantum', 'genome', 'species', 'asteroid', 'telescope'],
+  Business: ['market', 'stock', 'economy', 'bank', 'trade', 'tariff', 'investment', 'revenue', 'profit', 'startup', 'ipo', 'ceo', 'billion', 'million', 'gdp', 'finance', 'inflation'],
+  Technology: ['ai', 'artificial intelligence', 'tech', 'software', 'google', 'apple', 'microsoft', 'meta', 'chip', 'robot', 'cyber', 'data', 'app', 'cloud', 'nvidia'],
+  Entertainment: ['movie', 'film', 'music', 'actor', 'celebrity', 'hollywood', 'bollywood', 'netflix', 'game', 'album', 'concert', 'award', 'oscar', 'grammy', 'streaming'],
+  Environment: ['climate', 'carbon', 'emissions', 'renewable', 'solar', 'pollution', 'wildfire', 'flood', 'drought', 'earthquake', 'hurricane', 'deforestation', 'biodiversity', 'glacier'],
+};
+
+const TLD_COUNTRY: Record<string, { country: string; continent: string; lat: number; lng: number }> = {
+  'co.in': { country: 'India', continent: 'Asia', lat: 20.5937, lng: 78.9629 },
+  'co.uk': { country: 'United Kingdom', continent: 'Europe', lat: 51.5074, lng: -0.1278 },
+  'com.au': { country: 'Australia', continent: 'Oceania', lat: -25.2744, lng: 133.7751 },
+  'co.ke': { country: 'Kenya', continent: 'Africa', lat: -1.2921, lng: 36.8219 },
+  'co.za': { country: 'South Africa', continent: 'Africa', lat: -30.5595, lng: 22.9375 },
+};
+
+const COUNTRY_COORDS: Record<string, { continent: string; lat: number; lng: number }> = {
+  'India': { continent: 'Asia', lat: 20.5937, lng: 78.9629 },
+  'United States': { continent: 'North America', lat: 38.9072, lng: -77.0369 },
+  'United Kingdom': { continent: 'Europe', lat: 51.5074, lng: -0.1278 },
+  'Australia': { continent: 'Oceania', lat: -25.2744, lng: 133.7751 },
+  'Kenya': { continent: 'Africa', lat: -1.2921, lng: 36.8219 },
+  'Pakistan': { continent: 'Asia', lat: 30.3753, lng: 69.3451 },
+  'Canada': { continent: 'North America', lat: 56.1304, lng: -106.3468 },
+  'Germany': { continent: 'Europe', lat: 51.1657, lng: 10.4515 },
+  'France': { continent: 'Europe', lat: 46.2276, lng: 2.2137 },
+  'Japan': { continent: 'Asia', lat: 36.2048, lng: 138.2529 },
+  'China': { continent: 'Asia', lat: 35.8617, lng: 104.1954 },
+  'Brazil': { continent: 'South America', lat: -14.2350, lng: -51.9253 },
+  'Nigeria': { continent: 'Africa', lat: 9.0820, lng: 8.6753 },
+  'South Africa': { continent: 'Africa', lat: -30.5595, lng: 22.9375 },
+  'Ireland': { continent: 'Europe', lat: 53.1424, lng: -7.6921 },
+  'Estonia': { continent: 'Europe', lat: 58.5953, lng: 25.0136 },
+  'Singapore': { continent: 'Asia', lat: 1.3521, lng: 103.8198 },
+};
+
+const INDIAN_STATES: Record<string, { lat: number; lng: number }> = {
+  'Andhra Pradesh': { lat: 15.9129, lng: 79.7400 },
+  'Telangana': { lat: 18.1124, lng: 79.0193 },
+  'Tamil Nadu': { lat: 11.1271, lng: 78.6569 },
+  'Karnataka': { lat: 15.3173, lng: 75.7139 },
+  'Maharashtra': { lat: 19.7515, lng: 75.7139 },
+  'Kerala': { lat: 10.8505, lng: 76.2711 },
+  'Gujarat': { lat: 22.2587, lng: 71.1924 },
+  'Rajasthan': { lat: 27.0238, lng: 74.2179 },
+  'Uttar Pradesh': { lat: 26.8467, lng: 80.9462 },
+  'West Bengal': { lat: 22.9868, lng: 87.8550 },
+  'Bihar': { lat: 25.0961, lng: 85.3131 },
+  'Madhya Pradesh': { lat: 22.9734, lng: 78.6569 },
+  'Punjab': { lat: 31.1471, lng: 75.3412 },
+  'Delhi': { lat: 28.7041, lng: 77.1025 },
+  'Odisha': { lat: 20.9517, lng: 85.0985 },
+  'Assam': { lat: 26.2006, lng: 92.9376 },
+  'Jharkhand': { lat: 23.6102, lng: 85.2799 },
+  'Chhattisgarh': { lat: 21.2787, lng: 81.8661 },
+  'Haryana': { lat: 29.0588, lng: 76.0856 },
+  'Goa': { lat: 15.2993, lng: 74.1240 },
+  'Himachal Pradesh': { lat: 31.1048, lng: 77.1734 },
+  'Jammu and Kashmir': { lat: 33.7782, lng: 76.5762 },
+  'Uttarakhand': { lat: 30.0668, lng: 79.0193 },
+  'Manipur': { lat: 24.6637, lng: 93.9063 },
+  'Meghalaya': { lat: 25.4670, lng: 91.3662 },
+  'Mizoram': { lat: 23.1645, lng: 92.9376 },
+  'Nagaland': { lat: 26.1584, lng: 94.5624 },
+  'Sikkim': { lat: 27.5330, lng: 88.5122 },
+  'Tripura': { lat: 23.9408, lng: 91.9882 },
+  'Arunachal Pradesh': { lat: 28.2180, lng: 94.7278 },
+};
+
+function inferCategory(title: string): string {
+  const lower = title.toLowerCase();
+  let best = 'Technology';
+  let bestCount = 0;
+  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    const count = keywords.filter(k => lower.includes(k)).length;
+    if (count > bestCount) { best = cat; bestCount = count; }
+  }
+  return best;
+}
+
+function inferLocation(article: RawArticle): { city: string; district: string; state: string; country: string; continent: string; lat: number; lng: number } {
+  const text = `${article.title} ${article.description} ${article.source.name}`.toLowerCase();
+
+  // 1. Check hint from fetch source (GNews country param, state news)
+  if (article._hint?.state) {
+    const st = article._hint.state;
+    const coords = INDIAN_STATES[st] || { lat: 20.5937, lng: 78.9629 };
+    return { city: '', district: '', state: st, country: 'India', continent: 'Asia', lat: coords.lat + (Math.random() - 0.5) * 2, lng: coords.lng + (Math.random() - 0.5) * 2 };
+  }
+
+  if (article._hint?.country === 'in') {
+    // Try to find a state mentioned in the text
+    for (const [state, coords] of Object.entries(INDIAN_STATES)) {
+      if (text.includes(state.toLowerCase())) {
+        return { city: '', district: '', state, country: 'India', continent: 'Asia', lat: coords.lat + (Math.random() - 0.5) * 1, lng: coords.lng + (Math.random() - 0.5) * 1 };
+      }
+    }
+    return { city: '', district: '', state: '', country: 'India', continent: 'Asia', lat: 20.5937 + (Math.random() - 0.5) * 10, lng: 78.9629 + (Math.random() - 0.5) * 10 };
+  }
+
+  // 2. Check for known countries in text
+  for (const [country, coords] of Object.entries(COUNTRY_COORDS)) {
+    if (text.includes(country.toLowerCase())) {
+      return { city: '', district: '', state: '', country, continent: coords.continent, lat: coords.lat + (Math.random() - 0.5) * 4, lng: coords.lng + (Math.random() - 0.5) * 4 };
+    }
+  }
+
+  // 3. Check source domain TLD
+  try {
+    const domain = article.source.url ? new URL(article.url).hostname : article.source.name;
+    for (const [tld, loc] of Object.entries(TLD_COUNTRY)) {
+      if (domain.endsWith(`.${tld}`)) {
+        return { city: '', district: '', state: '', country: loc.country, continent: loc.continent, lat: loc.lat + (Math.random() - 0.5) * 4, lng: loc.lng + (Math.random() - 0.5) * 4 };
+      }
+    }
+    // Common US domains
+    if (domain.endsWith('.com') || domain.endsWith('.org') || domain.endsWith('.net')) {
+      return { city: '', district: '', state: '', country: 'United States', continent: 'North America', lat: 38.9 + (Math.random() - 0.5) * 20, lng: -98.35 + (Math.random() - 0.5) * 20 };
+    }
+  } catch { /* ignore URL parse errors */ }
+
+  // 4. Scatter globally as fallback
+  const fallbacks = Object.values(COUNTRY_COORDS);
+  const pick = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  return { city: '', district: '', state: '', country: 'Unknown', continent: pick.continent, lat: pick.lat + (Math.random() - 0.5) * 10, lng: pick.lng + (Math.random() - 0.5) * 10 };
+}
+
+// ─── Combine raw articles into final format with inferred metadata ───
 function buildAnalyzedArticles(raw: RawArticle[], analyses: any[]): AnalyzedArticle[] {
   return raw.map((article, index) => {
     const analysis = analyses[index] || {};
-    const location = analysis.location || {};
+    const analysisLoc = analysis.location || {};
+    const hasAnalysis = Object.keys(analysis).length > 0;
+
+    const category = hasAnalysis ? (analysis.category || inferCategory(article.title)) : inferCategory(article.title);
+    const loc = hasAnalysis && analysisLoc.lat ? analysisLoc : inferLocation(article);
 
     return {
       id: uuidv4(),
@@ -395,19 +533,19 @@ function buildAnalyzedArticles(raw: RawArticle[], analyses: any[]): AnalyzedArti
       sourceUrl: article.url,
       imageUrl: article.image,
       timestamp: article.publishedAt,
-      category: analysis.category || 'Technology',
+      category,
       sentiment: analysis.sentiment || 'neutral',
       sentimentScore: analysis.sentimentScore ?? 0.5,
       credibilityScore: analysis.credibilityScore ?? 70,
       bertConfidence: 0.5,
       location: {
-        city: location.city || 'Unknown',
-        district: location.district || '',
-        state: location.state || '',
-        country: location.country || 'Unknown',
-        continent: location.continent || 'Unknown',
-        lat: location.lat || 0,
-        lng: location.lng || 0,
+        city: loc.city || '',
+        district: loc.district || '',
+        state: loc.state || '',
+        country: loc.country || 'Unknown',
+        continent: loc.continent || 'Unknown',
+        lat: loc.lat || 0,
+        lng: loc.lng || 0,
       },
       entities: (analysis.entities || []),
       aiSummary: analysis.aiSummary || article.description || '',
