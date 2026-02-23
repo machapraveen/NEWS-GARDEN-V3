@@ -40,6 +40,7 @@ supabase/.temp/
 
 # Misc
 .mcp.json
+my_research/
 
 # Test screenshots
 *.png
