@@ -85,26 +85,37 @@ function extractAndParseJSON(text: string): any {
 }
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-        generationConfig: { temperature: 0.3 },
-      }),
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+          generationConfig: { temperature: 0.3 },
+        }),
+      }
+    );
+
+    if (response.status === 429 && attempt < MAX_RETRIES - 1) {
+      const wait = (attempt + 1) * 2000; // 2s, 4s backoff
+      console.warn(`Gemini rate limited, retrying in ${wait}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+      await new Promise(r => setTimeout(r, wait));
+      continue;
     }
-  );
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error('Gemini API error:', response.status, errText);
-    throw new Error(`Gemini API error: ${response.status}`);
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Gemini API error:', response.status, errText);
+      throw new Error(`Gemini API error: ${response.status} - ${errText.slice(0, 200)}`);
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
   }
-
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  throw new Error('Gemini API: max retries exceeded');
 }
 
 async function callHuggingFace(text: string, apiKey: string): Promise<{ label: string; score: number } | null> {
@@ -272,8 +283,12 @@ Return ONLY valid JSON, no markdown.`;
     });
   } catch (err) {
     console.error('Single analysis error:', err);
-    return new Response(JSON.stringify({ error: 'Analysis failed' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    const msg = err instanceof Error ? err.message : String(err);
+    const isQuota = msg.includes('429');
+    return new Response(JSON.stringify({
+      error: isQuota ? 'AI quota exceeded — try again later' : 'Analysis failed',
+    }), {
+      status: isQuota ? 429 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 }

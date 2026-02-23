@@ -471,24 +471,8 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Sending ${rawArticles.length} articles to Gemini for analysis (batched)`);
-
-    // 3. Analyze with Gemini in batches of 25
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    let analyses: any[] = [];
-    if (GEMINI_API_KEY) {
-      const BATCH_SIZE = 25;
-      for (let batchStart = 0; batchStart < rawArticles.length; batchStart += BATCH_SIZE) {
-        const batch = rawArticles.slice(batchStart, batchStart + BATCH_SIZE);
-        let batchAnalyses: any[] = [];
-        batchAnalyses = await analyzeWithGemini(batch, GEMINI_API_KEY);
-        analyses.push(...batchAnalyses);
-        console.log(`Analyzed batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(rawArticles.length / BATCH_SIZE)}: ${batchAnalyses.length} results`);
-      }
-    }
-
-    // 4. Build final articles
-    const analyzedArticles = buildAnalyzedArticles(rawArticles, analyses);
+    // 3. Build articles with defaults (Gemini analysis is on-demand per article)
+    const analyzedArticles = buildAnalyzedArticles(rawArticles, []);
 
     // 5. Store in database (blocking — ensures cache is ready for next request)
     if (!query) {

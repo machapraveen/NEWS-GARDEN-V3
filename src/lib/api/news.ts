@@ -93,6 +93,32 @@ export async function analyzeCredibility(article: NewsArticle) {
   return data;
 }
 
+// Full on-demand AI analysis for a single article (sentiment, category, location, entities, summary + credibility)
+export async function analyzeArticleFull(article: NewsArticle): Promise<{
+  analysis: any;
+  credibility: any;
+}> {
+  const [analysisResult, credResult] = await Promise.allSettled([
+    callEdgeFunction('analyze-article', {
+      title: article.headline,
+      description: article.summary,
+      content: article.fullText,
+      type: 'full-analysis',
+    }),
+    callEdgeFunction('analyze-article', {
+      title: article.headline,
+      description: article.summary,
+      content: article.fullText,
+      type: 'credibility',
+    }),
+  ]);
+
+  return {
+    analysis: analysisResult.status === 'fulfilled' ? analysisResult.value : null,
+    credibility: credResult.status === 'fulfilled' ? credResult.value : null,
+  };
+}
+
 // ─── State Daily News ───
 export interface StateNewsItem {
   state: string;
