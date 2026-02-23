@@ -55,6 +55,16 @@ function getSupabaseAdmin() {
   );
 }
 
+// ─── Normalize category to title case ───
+const VALID_CATEGORIES = ['Politics', 'Technology', 'Sports', 'Health', 'Science', 'Business', 'Entertainment', 'Environment'];
+function normalizeCategory(raw: string): string {
+  const lower = raw.toLowerCase();
+  const match = VALID_CATEGORIES.find(c => c.toLowerCase() === lower);
+  if (match) return match;
+  if (lower === 'general' || lower === 'world') return 'Politics';
+  return 'Technology';
+}
+
 // ─── Check if cache is fresh ───
 async function getCachedArticles(supabase: any): Promise<AnalyzedArticle[] | null> {
   // Check last fetch time
@@ -91,11 +101,11 @@ async function getCachedArticles(supabase: any): Promise<AnalyzedArticle[] | nul
     sourceUrl: a.url || '',
     imageUrl: a.image_url || '',
     timestamp: a.published_at || new Date().toISOString(),
-    category: a.category || 'Technology',
+    category: normalizeCategory(a.category || 'Technology'),
     sentiment: a.sentiment_label || 'neutral',
     sentimentScore: a.sentiment_score ?? 0.5,
     credibilityScore: a.credibility_score ?? 70,
-    bertConfidence: a.roberta_fake_score ?? 0.5,
+    bertConfidence: a.ai_fake_score ?? 0.5,
     location: {
       city: a.city || 'Unknown',
       district: a.district || '',
@@ -136,8 +146,7 @@ async function storeArticles(supabase: any, articles: AnalyzedArticle[], source:
     sentiment_score: a.sentimentScore,
     sentiment_label: a.sentiment,
     credibility_score: a.credibilityScore,
-    roberta_fake_score: a.bertConfidence,
-    entities: a.entities,
+    ai_fake_score: a.bertConfidence,
     published_at: a.timestamp,
     fetched_at: now,
     created_at: now,

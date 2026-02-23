@@ -35,33 +35,30 @@ const Index = () => {
 
   // Fetch ALL news once (no category param). Called on mount and on refresh.
   const loadNews = useCallback(async (forceRefresh = false) => {
-    // Check cache first (unless forced)
+    // Show cached articles instantly (localStorage persists across reloads)
     if (!forceRefresh) {
-      const cached = getCachedNews(null); // Always use the "__all__" cache key
+      const cached = getCachedNews(null);
       if (cached && cached.length > 0) {
         setAllArticles(cached);
         setLoading(false);
-        return;
+        // Don't return — still check for updates in background
       }
     }
 
-    setLoading(true);
+    // If no cache shown yet, show loading spinner
+    if (!getCachedNews(null)) setLoading(true);
     setNoNewUpdates(false);
+
     try {
-      const data = await fetchAndAnalyzeNews(null, 100, forceRefresh); // Pass forceRefresh to server
+      const data = await fetchAndAnalyzeNews(null, 100, forceRefresh);
       const newHash = generateContentHash(data);
 
       // Check if content actually changed
       const cacheEntry = getCacheEntry(null);
       if (cacheEntry && cacheEntry.contentHash === newHash && data.length > 0) {
-        setAllArticles(cacheEntry.articles);
         setNoNewUpdates(true);
         setLastRefresh(new Date());
-        toast({
-          title: "Already up to date",
-          description: `No new articles since ${lastChangedAtRef.current ? lastChangedAtRef.current.toLocaleTimeString() : 'last check'}. News updates every few hours.`,
-        });
-      } else {
+      } else if (data.length > 0) {
         setAllArticles(data);
         setCachedNews(null, data, newHash);
         setLastRefresh(new Date());
@@ -72,16 +69,12 @@ const Index = () => {
     } catch (err) {
       console.error('Failed to load news:', err);
       const cached = getCachedNews(null);
-      if (cached) {
+      if (cached && cached.length > 0) {
         setAllArticles(cached);
-        toast({
-          title: "Using cached news",
-          description: "Could not fetch new articles. Showing previously loaded news.",
-        });
       } else {
         toast({
           title: "Error loading news",
-          description: "Could not fetch real-time news. Please try refreshing.",
+          description: "Could not fetch news. Please try refreshing.",
           variant: "destructive",
         });
       }
