@@ -100,7 +100,7 @@ const Index = () => {
   useEffect(() => {
     autoRefreshRef.current = setInterval(() => {
       console.log('Auto-refreshing news...');
-      loadNews(true);
+      loadNews(false);
     }, AUTO_REFRESH_MS);
 
     return () => {

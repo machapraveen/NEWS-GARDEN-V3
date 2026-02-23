@@ -253,18 +253,16 @@ async function getStateNewsAsRaw(supabase: any): Promise<RawArticle[]> {
   }
 }
 
-// ─── Multi-region fetch: 5 parallel calls for ~100 articles ───
+// ─── Multi-region fetch: 5 parallel calls for diverse coverage ───
 async function fetchMultiRegion(apiKey: string, supabase: any): Promise<{ articles: RawArticle[]; source: string }> {
   const fetches = [
-    // 1. Global top headlines (max 100)
-    fetchGNews(apiKey, undefined, 100),
+    // 1. Global top headlines (keep under edge function time limit)
+    fetchGNews(apiKey, undefined, 10),
     // 2. India news
     fetchGNews(apiKey, undefined, 10, 'in'),
-    // 3. Regional diversity via search
-    fetchGNews(apiKey, 'world news', 10),
-    // 4. GDELT enrichment for cross-source coverage
-    fetchGDELT('world news', 50),
-    // 5. State news from DB (already fetched daily by fetch-state-news)
+    // 3. GDELT enrichment for cross-source coverage
+    fetchGDELT('world news', 20),
+    // 4. State news from DB
     getStateNewsAsRaw(supabase),
   ];
 
@@ -275,7 +273,7 @@ async function fetchMultiRegion(apiKey: string, supabase: any): Promise<{ articl
   results.forEach((result, i) => {
     if (result.status === 'fulfilled' && result.value.length > 0) {
       allArticles.push(...result.value);
-      sources.push(i < 3 ? 'GNews' : i === 3 ? 'GDELT' : 'StateNews');
+      sources.push(i < 2 ? 'GNews' : i === 2 ? 'GDELT' : 'StateNews');
     }
   });
 
@@ -292,30 +290,67 @@ async function fetchMultiRegion(apiKey: string, supabase: any): Promise<{ articl
   return { articles: unique, source: sourceLabel };
 }
 
+// ─── Robust JSON extraction from Gemini responses ───
+function extractAndParseJSON(text: string): any[] {
+  // Strip markdown fences
+  let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+  // Try direct parse first
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed)) return parsed;
+    // Handle {results: [...]} wrapper
+    if (parsed && Array.isArray(parsed.results)) return parsed.results;
+    if (parsed && typeof parsed === 'object') {
+      const arrKey = Object.keys(parsed).find(k => Array.isArray(parsed[k]));
+      if (arrKey) return parsed[arrKey];
+    }
+    return [parsed];
+  } catch { /* continue to extraction */ }
+
+  // Find JSON array in surrounding text
+  const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    try { return JSON.parse(arrayMatch[0]); } catch { /* try repair */ }
+
+    // Truncated response: find last complete object and close array
+    const truncated = arrayMatch[0];
+    const lastCloseBrace = truncated.lastIndexOf('}');
+    if (lastCloseBrace > 0) {
+      const repaired = truncated.slice(0, lastCloseBrace + 1) + ']';
+      try {
+        const parsed = JSON.parse(repaired);
+        if (Array.isArray(parsed)) {
+          console.warn(`Repaired truncated JSON: got ${parsed.length} items from partial response`);
+          return parsed;
+        }
+      } catch { /* give up */ }
+    }
+  }
+
+  // Find JSON object in surrounding text
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try {
+      const parsed = JSON.parse(objMatch[0]);
+      if (Array.isArray(parsed.results)) return parsed.results;
+      return [parsed];
+    } catch { /* give up */ }
+  }
+
+  console.error('Failed to extract JSON from Gemini response, preview:', cleaned.slice(0, 300));
+  return [];
+}
+
 // ─── Call Gemini for batch analysis (with district/state extraction) ───
 async function analyzeWithGemini(articles: RawArticle[], apiKey: string): Promise<any[]> {
   const articleList = articles.map((a, i) =>
-    `[Article ${i}]\nTitle: ${a.title}\nDescription: ${a.description || ''}\nContent: ${(a.content || a.description || a.title).slice(0, 1500)}`
-  ).join('\n\n---\n\n');
+    `[${i}] ${a.title} | ${(a.description || '').slice(0, 200)}`
+  ).join('\n');
 
-  const systemPrompt = `You are a news analysis AI. You will receive multiple articles. For EACH article, return analysis in a JSON array.
-Each element must have:
-- sentiment: "positive", "negative", or "neutral"
-- sentimentScore: number 0-1
-- credibilityScore: number 0-100
-- aiSummary: a 2-sentence summary
-- entities: array of {text: string, type: "person"|"place"|"organization"}
-- category: one of "Politics", "Technology", "Sports", "Health", "Science", "Business", "Entertainment", "Environment"
-- location: {city, district, state, country, continent, lat, lng}
-  * city: the specific city mentioned (e.g., "San Francisco", "Mumbai", "London")
-  * district: the local district/borough/ward (e.g., "Manhattan", "Chiyoda", "Banjara Hills")
-  * state: the state/province/region (e.g., "Telangana", "California", "Bavaria")
-  * country: the country name (e.g., "United States", "India", "Germany")
-  * continent: one of "North America", "South America", "Europe", "Asia", "Africa", "Oceania"
-  * lat: latitude as number
-  * lng: longitude as number
-
-Return ONLY a valid JSON array with exactly ${articles.length} elements, one per article in order. No markdown.`;
+  const systemPrompt = `Analyze ${articles.length} news articles. Return a JSON array with ${articles.length} objects, one per article in order.
+Each object: {"sentiment":"positive|negative|neutral","sentimentScore":0.0-1.0,"credibilityScore":0-100,"aiSummary":"2 sentences","entities":[{"text":"...","type":"person|place|organization"}],"category":"Politics|Technology|Sports|Health|Science|Business|Entertainment|Environment","location":{"city":"...","district":"...","state":"...","country":"...","continent":"North America|South America|Europe|Asia|Africa|Oceania","lat":0.0,"lng":0.0}}
+Return ONLY the JSON array. No markdown, no explanation.`;
 
   try {
     const response = await fetch(
@@ -324,7 +359,7 @@ Return ONLY a valid JSON array with exactly ${articles.length} elements, one per
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemPrompt}\n\nAnalyze these ${articles.length} articles:\n\n${articleList}` }] }],
+          contents: [{ parts: [{ text: `${systemPrompt}\n\nArticles:\n${articleList}` }] }],
           generationConfig: { temperature: 0.3 },
         }),
       }
@@ -337,8 +372,8 @@ Return ONLY a valid JSON array with exactly ${articles.length} elements, one per
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-    const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    return JSON.parse(cleaned);
+    console.log(`Gemini response preview (${text.length} chars): ${text.slice(0, 200)}...`);
+    return extractAndParseJSON(text);
   } catch (err) {
     console.error('Gemini analysis error:', err);
     return [];
@@ -446,13 +481,7 @@ serve(async (req) => {
       for (let batchStart = 0; batchStart < rawArticles.length; batchStart += BATCH_SIZE) {
         const batch = rawArticles.slice(batchStart, batchStart + BATCH_SIZE);
         let batchAnalyses: any[] = [];
-        for (let attempt = 0; attempt < 3; attempt++) {
-          batchAnalyses = await analyzeWithGemini(batch, GEMINI_API_KEY);
-          if (batchAnalyses.length > 0) break;
-          const wait = Math.pow(2, attempt + 1) * 2000;
-          console.warn(`Batch ${batchStart / BATCH_SIZE + 1} retry ${attempt + 1}, waiting ${wait}ms...`);
-          await new Promise(r => setTimeout(r, wait));
-        }
+        batchAnalyses = await analyzeWithGemini(batch, GEMINI_API_KEY);
         analyses.push(...batchAnalyses);
         console.log(`Analyzed batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(rawArticles.length / BATCH_SIZE)}: ${batchAnalyses.length} results`);
       }

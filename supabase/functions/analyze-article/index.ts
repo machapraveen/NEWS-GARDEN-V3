@@ -38,6 +38,52 @@ serve(async (req) => {
   }
 });
 
+// ─── Robust JSON extraction from Gemini responses ───
+function extractAndParseJSON(text: string): any {
+  // Strip markdown fences
+  let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+  // Try direct parse first
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.results)) return parsed.results;
+    if (parsed && typeof parsed === 'object') {
+      const arrKey = Object.keys(parsed).find(k => Array.isArray(parsed[k]));
+      if (arrKey) return parsed[arrKey];
+    }
+    return parsed;
+  } catch { /* continue to extraction */ }
+
+  // Find JSON array in surrounding text
+  const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    try { return JSON.parse(arrayMatch[0]); } catch { /* try repair */ }
+
+    const truncated = arrayMatch[0];
+    const lastCloseBrace = truncated.lastIndexOf('}');
+    if (lastCloseBrace > 0) {
+      const repaired = truncated.slice(0, lastCloseBrace + 1) + ']';
+      try {
+        const parsed = JSON.parse(repaired);
+        if (Array.isArray(parsed)) {
+          console.warn(`Repaired truncated JSON: got ${parsed.length} items from partial response`);
+          return parsed;
+        }
+      } catch { /* give up */ }
+    }
+  }
+
+  // Find JSON object in surrounding text
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try { return JSON.parse(objMatch[0]); } catch { /* give up */ }
+  }
+
+  console.error('Failed to extract JSON from Gemini response, preview:', cleaned.slice(0, 300));
+  return null;
+}
+
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -117,9 +163,9 @@ Return ONLY a valid JSON array with exactly ${articles.length} elements, one per
 
   try {
     const content = await callGemini(systemPrompt, `Analyze these ${articles.length} articles:\n\n${articleList}`, apiKey);
-    const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    const results = JSON.parse(cleaned);
-    return new Response(JSON.stringify({ results }), {
+    console.log(`Batch Gemini response preview (${content.length} chars): ${content.slice(0, 200)}...`);
+    const results = extractAndParseJSON(content);
+    return new Response(JSON.stringify({ results: Array.isArray(results) ? results : [] }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (err) {
@@ -152,10 +198,8 @@ Return ONLY valid JSON, no markdown.`,
 
   let geminiData: any = {};
   if (geminiResult.status === 'fulfilled') {
-    try {
-      const cleaned = geminiResult.value.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      geminiData = JSON.parse(cleaned);
-    } catch { /* fallback below */ }
+    const parsed = extractAndParseJSON(geminiResult.value);
+    if (parsed && typeof parsed === 'object') geminiData = parsed;
   }
 
   let bertConfidence = 0.5;
@@ -220,10 +264,10 @@ Return ONLY valid JSON, no markdown.`;
 
   try {
     const resultContent = await callGemini(systemPrompt, userPrompt, apiKey);
-    const cleaned = resultContent.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    const result = JSON.parse(cleaned);
+    console.log(`Single Gemini response preview (${resultContent.length} chars): ${resultContent.slice(0, 200)}...`);
+    const result = extractAndParseJSON(resultContent);
 
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify(result || {}), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (err) {
