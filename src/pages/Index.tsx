@@ -201,7 +201,7 @@ const Index = () => {
 
       {/* Navigation links */}
       <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2">
-        <Link to="/dashboard" state={{ articles: allArticles }}>
+        <Link to="/dashboard">
           <Button variant="outline" size="sm" className="glass border-border/30">
             <BarChart3 className="w-4 h-4 mr-1.5" />
             Dashboard

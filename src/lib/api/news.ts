@@ -153,8 +153,8 @@ export async function fetchStateNews(forceRefresh = false): Promise<StateNewsIte
     stateNewsCache = { data: items, ts: Date.now() };
     console.log(`State news: ${items.length} states (cached: ${data?.cached})`);
     return items;
-  } catch (err) {
-    console.error('Failed to fetch state news:', err);
+  } catch {
+    // fetch-state-news edge function may not be deployed yet — fail silently
     return stateNewsCache?.data || [];
   }
 }
