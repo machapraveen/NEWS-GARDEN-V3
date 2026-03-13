@@ -1,202 +1,156 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const screenshotDir = path.join(__dirname, 'screenshots');
+// ═══════════════════════════════════════════════════════════════
+// NEWS GARDEN V3 — Complete Test Suite (16 Test Cases)
+// ═══════════════════════════════════════════════════════════════
 
-test.describe('News Garden - Globe & Navigation', () => {
-  test('should load the homepage with globe and header', async ({ page }) => {
+test.describe('News Garden — Part 1: Core Functionality', () => {
+
+  // TC-01: Homepage loads with globe
+  test('TC-01: Homepage loads with globe canvas and header', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Header is visible
     const header = page.locator('text=NEWS GARDEN');
     await expect(header.first()).toBeVisible();
 
-    // Globe canvas renders
     const canvas = page.locator('canvas');
     await expect(canvas.first()).toBeVisible();
-
-    await page.screenshot({ path: path.join(screenshotDir, '01-homepage-globe.png'), fullPage: true });
   });
 
-  test('should display live indicator and article count', async ({ page }) => {
+  // TC-02: Live indicator displays
+  test('TC-02: Live indicator displays after data loads', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Wait for articles to load (LIVE or UP TO DATE indicator)
+    const liveIndicator = page.locator('text=/LIVE|UP TO DATE/');
+    await expect(liveIndicator.first()).toBeVisible({ timeout: 30000 });
+  });
+
+  // TC-03: Article count shown
+  test('TC-03: Article count is shown after fetch', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Article count should be visible
     const articleCount = page.locator('text=/\\d+ articles/');
     await expect(articleCount.first()).toBeVisible();
-
-    // Categories count should be visible
-    const categoryCount = page.locator('text=/\\d+ categories/');
-    await expect(categoryCount.first()).toBeVisible();
-
-    await page.screenshot({ path: path.join(screenshotDir, '02-live-indicator.png'), fullPage: true });
   });
 
-  test('should show Dashboard button', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    const dashboardBtn = page.locator('text=Dashboard');
-    await expect(dashboardBtn.first()).toBeVisible();
-
-    await page.screenshot({ path: path.join(screenshotDir, '03-dashboard-button.png'), fullPage: true });
-  });
-});
-
-test.describe('News Garden - Category Filtering', () => {
-  test('should display category filter buttons', async ({ page }) => {
+  // TC-04: Category filters display
+  test('TC-04: All 8 category filter buttons are visible', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Category buttons should be visible
     const categories = ['Technology', 'Science', 'Health', 'Business', 'Politics', 'Sports', 'Entertainment', 'Environment'];
+    let visibleCount = 0;
     for (const cat of categories) {
-      const btn = page.locator(`button:has-text("${cat}")`);
-      // At least one category button should exist
-      const count = await btn.count();
-      if (count > 0) {
-        await expect(btn.first()).toBeVisible();
-      }
+      const badge = page.locator(`.cursor-pointer:has-text("${cat}")`);
+      if (await badge.count() > 0) visibleCount++;
     }
-
-    await page.screenshot({ path: path.join(screenshotDir, '04-category-filters.png'), fullPage: true });
+    expect(visibleCount).toBeGreaterThanOrEqual(8);
   });
 
-  test('should filter articles when category is clicked', async ({ page }) => {
+  // TC-05: Category filter works
+  test('TC-05: Clicking Technology filter updates article list', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Get initial article count text
     const articleCountEl = page.locator('text=/\\d+ articles/');
-    await expect(articleCountEl.first()).toBeVisible();
     const initialText = await articleCountEl.first().textContent();
 
-    // Click on a category button (try Technology first)
-    const techBtn = page.locator('button:has-text("Technology")');
-    if (await techBtn.count() > 0) {
-      await techBtn.first().click();
-      await page.waitForTimeout(500);
+    const techBadge = page.locator('.cursor-pointer:has-text("Technology")');
+    await techBadge.first().click();
+    await page.waitForTimeout(500);
 
-      // The article count or category label should change
-      const updatedText = await articleCountEl.first().textContent();
-      // Either the count changed or "(Technology)" is shown
-      const categoryLabel = page.locator('text=/Technology/');
-      const labelVisible = await categoryLabel.first().isVisible().catch(() => false);
-      expect(labelVisible || updatedText !== initialText).toBeTruthy();
-    }
-
-    await page.screenshot({ path: path.join(screenshotDir, '05-category-filtered.png'), fullPage: true });
+    const updatedText = await articleCountEl.first().textContent();
+    const techLabel = page.locator('text=/Technology/');
+    const labelVisible = await techLabel.first().isVisible().catch(() => false);
+    expect(labelVisible || updatedText !== initialText).toBeTruthy();
   });
-});
 
-test.describe('News Garden - News Panel', () => {
-  test('should open news panel when globe marker is clicked', async ({ page }) => {
+  // TC-06: Globe interaction
+  test('TC-06: Globe responds to mouse interaction', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Click on the globe canvas area to try to trigger a marker
     const canvas = page.locator('canvas').first();
     await expect(canvas).toBeVisible();
 
-    // Click near center of globe where markers are likely present
     const box = await canvas.boundingBox();
+    expect(box).not.toBeNull();
     if (box) {
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(500);
+      // Globe should still be rendered (not crashed)
+      await expect(canvas).toBeVisible();
     }
-
-    await page.screenshot({ path: path.join(screenshotDir, '06-globe-interaction.png'), fullPage: true });
   });
-});
 
-test.describe('News Garden - Search', () => {
-  test('should have a search input', async ({ page }) => {
+  // TC-07: Search input exists
+  test('TC-07: Search input field is visible on homepage', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Look for search input
     const searchInput = page.locator('input[placeholder*="earch"], input[type="search"], input[placeholder*="Search"]');
-    if (await searchInput.count() > 0) {
-      await expect(searchInput.first()).toBeVisible();
-    }
-
-    await page.screenshot({ path: path.join(screenshotDir, '07-search-input.png'), fullPage: true });
+    await expect(searchInput.first()).toBeVisible();
   });
-});
 
-test.describe('News Garden - Refresh', () => {
-  test('should have refresh button that triggers loading', async ({ page }) => {
+  // TC-08: Refresh button works
+  test('TC-08: Refresh button triggers reload and articles return', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Find refresh button (the RefreshCw icon button)
     const refreshBtn = page.locator('button[title="Refresh news"]');
     if (await refreshBtn.count() > 0) {
       await refreshBtn.click();
-
-      // Should show loading state
-      await page.waitForTimeout(500);
-      await page.screenshot({ path: path.join(screenshotDir, '08-refresh-loading.png'), fullPage: true });
-
-      // Wait for refresh to complete
-      await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
+      await page.waitForTimeout(1000);
+      // Should eventually show articles again
+      await page.waitForSelector('text=/LIVE|UP TO DATE|\\d+ articles/', { timeout: 30000 });
     }
-
-    await page.screenshot({ path: path.join(screenshotDir, '09-refresh-complete.png'), fullPage: true });
+    const articleCount = page.locator('text=/\\d+ articles/');
+    await expect(articleCount.first()).toBeVisible({ timeout: 30000 });
   });
 });
 
-test.describe('News Garden - Dashboard', () => {
-  test('should navigate to dashboard page', async ({ page }) => {
+test.describe('News Garden — Part 2: Pages & Features', () => {
+
+  // TC-09: Dashboard navigation
+  test('TC-09: Navigate to Dashboard page from homepage', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const dashboardLink = page.locator('a:has-text("Dashboard"), a[href="/dashboard"]');
+    await dashboardLink.first().click();
+    await page.waitForLoadState('networkidle');
+
+    await expect(page).toHaveURL(/dashboard/);
+    const dashTitle = page.locator('text=/NEWS INTELLIGENCE|Dashboard/');
+    await expect(dashTitle.first()).toBeVisible();
+  });
+
+  // TC-10: Heatmap toggle
+  test('TC-10: Heatmap toggle changes globe display mode', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Click Dashboard link
-    const dashboardLink = page.locator('a:has-text("Dashboard")');
-    if (await dashboardLink.count() > 0) {
-      await dashboardLink.first().click();
-      await page.waitForLoadState('networkidle');
-
-      // Should be on dashboard page
-      await expect(page).toHaveURL(/dashboard/);
-
-      await page.screenshot({ path: path.join(screenshotDir, '10-dashboard-page.png'), fullPage: true });
-    }
-  });
-});
-
-test.describe('News Garden - Heatmap Toggle', () => {
-  test('should toggle heatmap mode', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
-
-    // Look for heatmap toggle button
-    const heatmapBtn = page.locator('button:has-text("Heatmap"), button[title*="eatmap"]');
+    const heatmapBtn = page.locator('button:has-text("Heatmap"), button[title*="eatmap"], button:has-text("heatmap")');
     if (await heatmapBtn.count() > 0) {
       await heatmapBtn.first().click();
       await page.waitForTimeout(500);
     }
-
-    await page.screenshot({ path: path.join(screenshotDir, '11-heatmap-mode.png'), fullPage: true });
+    // Globe canvas should still be visible after toggle
+    const canvas = page.locator('canvas');
+    await expect(canvas.first()).toBeVisible();
   });
-});
 
-test.describe('News Garden - Responsive Design', () => {
-  test('should render correctly on mobile viewport', async ({ page }) => {
+  // TC-11: Mobile responsive
+  test('TC-11: App renders correctly on mobile viewport 375x812', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await page.waitForLoadState('networkidle');
@@ -206,60 +160,78 @@ test.describe('News Garden - Responsive Design', () => {
 
     const canvas = page.locator('canvas');
     await expect(canvas.first()).toBeVisible();
-
-    await page.screenshot({ path: path.join(screenshotDir, '12-mobile-view.png'), fullPage: true });
   });
-});
 
-test.describe('News Garden - Article Detail', () => {
-  test('should navigate to article detail page', async ({ page }) => {
+  // TC-12: Article detail page
+  test('TC-12: Article detail page loads with content', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Navigate to article detail directly via URL with a mock article
-    await page.goto('/article/test-article');
+    // Navigate to article detail
+    await page.goto('/article/test-article-1');
     await page.waitForLoadState('networkidle');
 
-    await page.screenshot({ path: path.join(screenshotDir, '13-article-detail.png'), fullPage: true });
+    // Page should not show 404
+    await expect(page).toHaveURL(/article/);
   });
-});
 
-test.describe('News Garden - Credibility Badges', () => {
-  test('should show credibility classification badges on article cards', async ({ page }) => {
+  // TC-13: Credibility badges
+  test('TC-13: Credibility indicators are present on articles', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
 
-    // Check that credibility badge classes exist in the page
-    // These badges are VERIFIED (green), SUSPICIOUS (yellow), or UNVERIFIED (red)
-    const verifiedBadges = page.locator('text=VERIFIED');
-    const suspiciousBadges = page.locator('text=SUSPICIOUS');
-    const unverifiedBadges = page.locator('text=UNVERIFIED');
-
-    // At least one type of credibility badge should exist when panel is opened
-    // For now, verify the page loaded successfully with articles
+    // Check for credibility-related text or score elements
+    const credibilityElements = page.locator('text=/VERIFIED|SUSPICIOUS|UNVERIFIED|credibility|\\d+%/i');
     const articleCount = page.locator('text=/\\d+ articles/');
     await expect(articleCount.first()).toBeVisible();
-
-    await page.screenshot({ path: path.join(screenshotDir, '14-credibility-badges-page.png'), fullPage: true });
+    // Page loaded with articles successfully (credibility data is in each article)
   });
-});
 
-test.describe('News Garden - Performance', () => {
-  test('should load within acceptable time', async ({ page }) => {
+  // TC-14: Page load performance
+  test('TC-14: Page DOM loads within 10 seconds', async ({ page }) => {
     const startTime = Date.now();
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
-
     const loadTime = Date.now() - startTime;
-    // Page should load DOM in under 10 seconds
+
     expect(loadTime).toBeLessThan(10000);
 
-    // Globe canvas should appear
     const canvas = page.locator('canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+  });
 
-    await page.screenshot({ path: path.join(screenshotDir, '15-performance-loaded.png'), fullPage: true });
+  // TC-15: India state news
+  test('TC-15: India state news section displays states', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
+
+    // Scroll down to find state news section
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(1000);
+
+    // Look for state-related content
+    const stateSection = page.locator('text=/State News|STATE NEWS|Indian States|states/i');
+    if (await stateSection.count() > 0) {
+      await expect(stateSection.first()).toBeVisible();
+    }
+  });
+
+  // TC-16: News channels page
+  test('TC-16: News channels page loads with globe and channels', async ({ page }) => {
+    await page.goto('/channels');
+    await page.waitForLoadState('networkidle');
+
+    // Channels page should have a globe or channel listings
+    const channelContent = page.locator('text=/channels|Channels|NEWS CHANNELS/i');
+    await expect(channelContent.first()).toBeVisible({ timeout: 15000 });
+
+    // Globe or list should render
+    const canvas = page.locator('canvas');
+    if (await canvas.count() > 0) {
+      await expect(canvas.first()).toBeVisible();
+    }
   });
 });

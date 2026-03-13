@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const CACHE_HOURS = 24; // Cache state news for 24 hours (once per day)
+const CACHE_HOURS = 6; // Refresh state news every 6 hours for freshness
 
 // Major Indian states + their key cities for GNews search matching
 const STATE_SEARCH_GROUPS = [
@@ -47,7 +47,7 @@ const STATE_SEARCH_GROUPS = [
 // State → city keywords for matching articles to states
 const STATE_KEYWORDS: Record<string, string[]> = {
   'Telangana': ['telangana', 'hyderabad', 'secunderabad', 'warangal', 'nizamabad', 'karimnagar'],
-  'Andhra Pradesh': ['andhra pradesh', 'visakhapatnam', 'vijayawada', 'tirupati', 'guntur', 'amaravati'],
+  'Andhra Pradesh': ['andhra pradesh', 'andhra', 'visakhapatnam', 'vijayawada', 'tirupati', 'guntur', 'amaravati', 'hindupur', 'nellore', 'rajahmundry', 'kakinada'],
   'Tamil Nadu': ['tamil nadu', 'chennai', 'coimbatore', 'madurai', 'salem', 'tiruchirappalli'],
   'Karnataka': ['karnataka', 'bengaluru', 'bangalore', 'mysuru', 'mysore', 'hubli', 'mangalore'],
   'Kerala': ['kerala', 'kochi', 'thiruvananthapuram', 'kozhikode', 'thrissur', 'kollam'],
@@ -60,7 +60,7 @@ const STATE_KEYWORDS: Record<string, string[]> = {
   'West Bengal': ['west bengal', 'kolkata', 'calcutta', 'howrah', 'durgapur'],
   'Bihar': ['bihar', 'patna', 'gaya', 'muzaffarpur', 'bhagalpur'],
   'Punjab': ['punjab', 'chandigarh', 'ludhiana', 'amritsar', 'jalandhar'],
-  'Haryana': ['haryana', 'gurugram', 'gurgaon', 'faridabad', 'karnal', 'hisar'],
+  'Haryana': ['haryana', 'gurugram', 'gurgaon', 'faridabad', 'karnal', 'hisar', 'panipat', 'rohtak', 'sonipat'],
   'Odisha': ['odisha', 'orissa', 'bhubaneswar', 'cuttack', 'puri'],
   'Assam': ['assam', 'guwahati', 'dibrugarh', 'silchar'],
   'Jharkhand': ['jharkhand', 'ranchi', 'jamshedpur', 'dhanbad', 'bokaro'],
@@ -92,7 +92,8 @@ interface StateNews {
 function getSupabaseAdmin() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
   );
 }
 
@@ -165,10 +166,32 @@ function matchArticleToState(title: string, description: string): string | null 
   return null;
 }
 
-// Fetch news from GNews for a search query
+// Fetch news from GNews for a search query (prefers recent, falls back to no date filter)
 async function fetchGNews(query: string, apiKey: string): Promise<any[]> {
   try {
-    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=in&max=3&apikey=${apiKey}`;
+    // Try with date filter first
+    const fromDate = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().split('.')[0] + 'Z';
+    const urlWithDate = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=in&max=10&from=${fromDate}&sortby=publishedAt&apikey=${apiKey}`;
+    const res1 = await fetch(urlWithDate);
+    if (res1.ok) {
+      const data1 = await res1.json();
+      if (data1.articles && data1.articles.length > 0) return data1.articles;
+    }
+    // Fallback: no date filter, sort by date (our code filters old articles)
+    const urlNoDate = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=in&max=5&sortby=publishedAt&apikey=${apiKey}`;
+    const res2 = await fetch(urlNoDate);
+    if (!res2.ok) return [];
+    const data2 = await res2.json();
+    return data2.articles || [];
+  } catch {
+    return [];
+  }
+}
+
+// Simpler fetch without date filter (for retry pass — our code filters by pubDate)
+async function fetchGNewsNoDateFilter(query: string, apiKey: string): Promise<any[]> {
+  try {
+    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=in&max=5&sortby=publishedAt&apikey=${apiKey}`;
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
@@ -221,8 +244,13 @@ serve(async (req: Request) => {
         if (result.status !== 'fulfilled' || !result.value.length) return;
         const targetState = batch[idx].states[0];
         const articles = result.value;
+        const twoDaysAgo = Date.now() - 4 * 24 * 60 * 60 * 1000;
 
         for (const article of articles) {
+          // Skip articles older than 4 days
+          const pubDate = new Date(article.publishedAt || 0).getTime();
+          if (pubDate < twoDaysAgo) continue;
+
           // Try to match article to its state
           const matched = matchArticleToState(article.title || '', article.description || '') || targetState;
           if (!stateNewsMap[matched]) {
@@ -245,7 +273,44 @@ serve(async (req: Request) => {
       }
     }
 
+    // Second pass: retry missing states with simpler queries
+    const allExpectedStates = STATE_SEARCH_GROUPS.map(g => g.states[0]);
+    const missingStates = allExpectedStates.filter(s => !stateNewsMap[s]);
+    if (missingStates.length > 0) {
+      console.log(`Retrying ${missingStates.length} missing states with simpler queries...`);
+      for (let i = 0; i < missingStates.length; i += batchSize) {
+        const batch = missingStates.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map(state => fetchGNewsNoDateFilter(`${state} news`, GNEWS_KEY))
+        );
+        const fourDaysAgo = Date.now() - 4 * 24 * 60 * 60 * 1000;
+        results.forEach((result, idx) => {
+          if (result.status !== 'fulfilled' || !result.value.length) return;
+          const state = batch[idx];
+          for (const article of result.value) {
+            const pubDate = new Date(article.publishedAt || 0).getTime();
+            if (pubDate < fourDaysAgo) continue;
+            if (!stateNewsMap[state]) {
+              stateNewsMap[state] = {
+                state,
+                title: article.title || '',
+                description: article.description || '',
+                url: article.url || '',
+                imageUrl: article.image || '',
+                source: article.source?.name || 'Unknown',
+                publishedAt: article.publishedAt || new Date().toISOString(),
+              };
+            }
+          }
+        });
+        if (i + batchSize < missingStates.length) {
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+    }
+
     const stateNewsList = Object.values(stateNewsMap);
+    console.log(`Final: ${stateNewsList.length} states covered`);
 
     // Store in database
     if (stateNewsList.length > 0) {
