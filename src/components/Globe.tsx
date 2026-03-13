@@ -99,10 +99,10 @@ export default function Globe({ onMarkerClick, selectedCategory, showHeatmap, ar
                 animation: pulse 2s infinite;
               "></div>
               <span style="font-family:Orbitron,sans-serif; font-weight:700; font-size:13px; color:${sentColor}; letter-spacing:0.5px;">
-                ${m.city}
+                ${m.city || m.state || m.country}
               </span>
-              <span style="color:#64748b; font-size:11px;">·</span>
-              <span style="color:#94a3b8; font-size:11px;">${m.country}</span>
+              ${(m.city || m.state) ? `<span style="color:#64748b; font-size:11px;">·</span>
+              <span style="color:#94a3b8; font-size:11px;">${m.country}</span>` : ''}
               <span style="margin-left:auto; background:${sentBg}; color:${sentColor}; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:600; border:1px solid ${sentBorder};">
                 ${m.sentiment.toUpperCase()}
               </span>

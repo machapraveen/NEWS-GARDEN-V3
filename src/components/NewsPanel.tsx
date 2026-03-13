@@ -117,15 +117,16 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
   const primaryArticle = markerArticles[0];
   if (!primaryArticle) return null;
 
-  // Build all 6 geographic levels from the articles
-  const levels = [
+  // Build geographic levels — skip levels with empty names
+  const allLevels = [
     { level: "City", name: primaryArticle.location.city, articles: articles.filter(a => a.location.city === primaryArticle.location.city) },
-    { level: "District", name: primaryArticle.location.district || primaryArticle.location.city, articles: articles.filter(a => (a.location.district || a.location.city) === (primaryArticle.location.district || primaryArticle.location.city)) },
-    { level: "State", name: primaryArticle.location.state || primaryArticle.location.country, articles: articles.filter(a => (a.location.state || a.location.country) === (primaryArticle.location.state || primaryArticle.location.country)) },
+    { level: "District", name: primaryArticle.location.district, articles: articles.filter(a => a.location.district === primaryArticle.location.district) },
+    { level: "State", name: primaryArticle.location.state, articles: articles.filter(a => a.location.state === primaryArticle.location.state) },
     { level: "Country", name: primaryArticle.location.country, articles: articles.filter(a => a.location.country === primaryArticle.location.country) },
     { level: "Continent", name: primaryArticle.location.continent, articles: articles.filter(a => a.location.continent === primaryArticle.location.continent) },
     { level: "World", name: "Global", articles: [...articles].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) },
   ];
+  const levels = allLevels.filter(l => l.name && l.name !== 'Unknown');
 
   return (
     <div className="fixed right-0 top-0 h-full w-full sm:w-[420px] z-50 glass border-l border-border/50 animate-in slide-in-from-right duration-300">
@@ -133,7 +134,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-primary" />
           <h2 className="font-display text-sm font-semibold tracking-wide text-foreground">
-            {marker.city}, {marker.country}
+            {marker.city || marker.state || marker.country}{marker.city && marker.country ? `, ${marker.country}` : ''}
           </h2>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">

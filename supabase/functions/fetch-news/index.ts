@@ -472,6 +472,76 @@ const MAJOR_CITIES: Record<string, { state: string; country: string; continent: 
   'srinagar': { state: 'Jammu and Kashmir', country: 'India', continent: 'Asia', lat: 34.0837, lng: 74.7973 },
   'panaji': { state: 'Goa', country: 'India', continent: 'Asia', lat: 15.4909, lng: 73.8278 },
   'raipur': { state: 'Chhattisgarh', country: 'India', continent: 'Asia', lat: 21.2514, lng: 81.6296 },
+  'noida': { state: 'Uttar Pradesh', country: 'India', continent: 'Asia', lat: 28.5355, lng: 77.391 },
+  'gurugram': { state: 'Haryana', country: 'India', continent: 'Asia', lat: 28.4595, lng: 77.0266 },
+  'gurgaon': { state: 'Haryana', country: 'India', continent: 'Asia', lat: 28.4595, lng: 77.0266 },
+  'faridabad': { state: 'Haryana', country: 'India', continent: 'Asia', lat: 28.4089, lng: 77.3178 },
+  'agra': { state: 'Uttar Pradesh', country: 'India', continent: 'Asia', lat: 27.1767, lng: 78.0081 },
+  'kanpur': { state: 'Uttar Pradesh', country: 'India', continent: 'Asia', lat: 26.4499, lng: 80.3319 },
+  'thane': { state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.2183, lng: 72.9781 },
+  'nashik': { state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.9975, lng: 73.7898 },
+  'vadodara': { state: 'Gujarat', country: 'India', continent: 'Asia', lat: 22.3072, lng: 73.1812 },
+  'rajkot': { state: 'Gujarat', country: 'India', continent: 'Asia', lat: 22.3039, lng: 70.8022 },
+  'gandhinagar': { state: 'Gujarat', country: 'India', continent: 'Asia', lat: 23.2156, lng: 72.6369 },
+  'jodhpur': { state: 'Rajasthan', country: 'India', continent: 'Asia', lat: 26.2389, lng: 73.0243 },
+  'udaipur': { state: 'Rajasthan', country: 'India', continent: 'Asia', lat: 24.5854, lng: 73.7125 },
+  'kota': { state: 'Rajasthan', country: 'India', continent: 'Asia', lat: 25.2138, lng: 75.8648 },
+  'mysuru': { state: 'Karnataka', country: 'India', continent: 'Asia', lat: 12.2958, lng: 76.6394 },
+  'mysore': { state: 'Karnataka', country: 'India', continent: 'Asia', lat: 12.2958, lng: 76.6394 },
+  'hubli': { state: 'Karnataka', country: 'India', continent: 'Asia', lat: 15.3647, lng: 75.124 },
+  'mangalore': { state: 'Karnataka', country: 'India', continent: 'Asia', lat: 12.9141, lng: 74.856 },
+  'kozhikode': { state: 'Kerala', country: 'India', continent: 'Asia', lat: 11.2588, lng: 75.7804 },
+  'thrissur': { state: 'Kerala', country: 'India', continent: 'Asia', lat: 10.5276, lng: 76.2144 },
+  'nellore': { state: 'Andhra Pradesh', country: 'India', continent: 'Asia', lat: 14.4426, lng: 79.9865 },
+  'guntur': { state: 'Andhra Pradesh', country: 'India', continent: 'Asia', lat: 16.3067, lng: 80.4365 },
+  'rajahmundry': { state: 'Andhra Pradesh', country: 'India', continent: 'Asia', lat: 17.0005, lng: 81.8042 },
+  'kakinada': { state: 'Andhra Pradesh', country: 'India', continent: 'Asia', lat: 16.9891, lng: 82.2475 },
+  'warangal': { state: 'Telangana', country: 'India', continent: 'Asia', lat: 17.9784, lng: 79.5941 },
+  'secunderabad': { state: 'Telangana', country: 'India', continent: 'Asia', lat: 17.4399, lng: 78.4983 },
+  'prayagraj': { state: 'Uttar Pradesh', country: 'India', continent: 'Asia', lat: 25.4358, lng: 81.8463 },
+  'gaya': { state: 'Bihar', country: 'India', continent: 'Asia', lat: 24.7955, lng: 85.0002 },
+  'muzaffarpur': { state: 'Bihar', country: 'India', continent: 'Asia', lat: 26.1209, lng: 85.3647 },
+  'jamshedpur': { state: 'Jharkhand', country: 'India', continent: 'Asia', lat: 22.8046, lng: 86.2029 },
+  'dhanbad': { state: 'Jharkhand', country: 'India', continent: 'Asia', lat: 23.7957, lng: 86.4304 },
+  'cuttack': { state: 'Odisha', country: 'India', continent: 'Asia', lat: 20.4625, lng: 85.8828 },
+  'amritsar': { state: 'Punjab', country: 'India', continent: 'Asia', lat: 31.634, lng: 74.8723 },
+  'ludhiana': { state: 'Punjab', country: 'India', continent: 'Asia', lat: 30.901, lng: 75.8573 },
+  'jalandhar': { state: 'Punjab', country: 'India', continent: 'Asia', lat: 31.326, lng: 75.5762 },
+  'haridwar': { state: 'Uttarakhand', country: 'India', continent: 'Asia', lat: 29.9457, lng: 78.1642 },
+  'rishikesh': { state: 'Uttarakhand', country: 'India', continent: 'Asia', lat: 30.0869, lng: 78.2676 },
+  'imphal': { state: 'Manipur', country: 'India', continent: 'Asia', lat: 24.817, lng: 93.9368 },
+  'shillong': { state: 'Meghalaya', country: 'India', continent: 'Asia', lat: 25.5788, lng: 91.8933 },
+  'agartala': { state: 'Tripura', country: 'India', continent: 'Asia', lat: 23.8315, lng: 91.2868 },
+  'kohima': { state: 'Nagaland', country: 'India', continent: 'Asia', lat: 25.6751, lng: 94.1086 },
+  'dimapur': { state: 'Nagaland', country: 'India', continent: 'Asia', lat: 25.9, lng: 93.7272 },
+  'aizawl': { state: 'Mizoram', country: 'India', continent: 'Asia', lat: 23.7271, lng: 92.7176 },
+  'itanagar': { state: 'Arunachal Pradesh', country: 'India', continent: 'Asia', lat: 27.0844, lng: 93.6053 },
+  'gangtok': { state: 'Sikkim', country: 'India', continent: 'Asia', lat: 27.3389, lng: 88.6065 },
+  'panipat': { state: 'Haryana', country: 'India', continent: 'Asia', lat: 29.3909, lng: 76.9635 },
+  'rohtak': { state: 'Haryana', country: 'India', continent: 'Asia', lat: 28.8955, lng: 76.6066 },
+  'karnal': { state: 'Haryana', country: 'India', continent: 'Asia', lat: 29.6857, lng: 76.9905 },
+  'manali': { state: 'Himachal Pradesh', country: 'India', continent: 'Asia', lat: 32.2396, lng: 77.1887 },
+  'dharamshala': { state: 'Himachal Pradesh', country: 'India', continent: 'Asia', lat: 32.219, lng: 76.3234 },
+  'margao': { state: 'Goa', country: 'India', continent: 'Asia', lat: 15.2832, lng: 73.9862 },
+  'dibrugarh': { state: 'Assam', country: 'India', continent: 'Asia', lat: 27.4728, lng: 94.9118 },
+  'silchar': { state: 'Assam', country: 'India', continent: 'Asia', lat: 24.8333, lng: 92.7789 },
+  'bilaspur': { state: 'Chhattisgarh', country: 'India', continent: 'Asia', lat: 22.0797, lng: 82.1409 },
+  'hindupur': { state: 'Andhra Pradesh', country: 'India', continent: 'Asia', lat: 15.8039, lng: 77.4934 },
+  // US (expanded)
+  'dallas': { state: 'Texas', country: 'United States', continent: 'North America', lat: 32.7767, lng: -96.797 },
+  'austin': { state: 'Texas', country: 'United States', continent: 'North America', lat: 30.2672, lng: -97.7431 },
+  'denver': { state: 'Colorado', country: 'United States', continent: 'North America', lat: 39.7392, lng: -104.9903 },
+  'phoenix': { state: 'Arizona', country: 'United States', continent: 'North America', lat: 33.4484, lng: -112.074 },
+  'philadelphia': { state: 'Pennsylvania', country: 'United States', continent: 'North America', lat: 39.9526, lng: -75.1652 },
+  'detroit': { state: 'Michigan', country: 'United States', continent: 'North America', lat: 42.3314, lng: -83.0458 },
+  'minneapolis': { state: 'Minnesota', country: 'United States', continent: 'North America', lat: 44.9778, lng: -93.265 },
+  'portland': { state: 'Oregon', country: 'United States', continent: 'North America', lat: 45.5155, lng: -122.6789 },
+  'las vegas': { state: 'Nevada', country: 'United States', continent: 'North America', lat: 36.1699, lng: -115.1398 },
+  'san diego': { state: 'California', country: 'United States', continent: 'North America', lat: 32.7157, lng: -117.1611 },
+  'nashville': { state: 'Tennessee', country: 'United States', continent: 'North America', lat: 36.1627, lng: -86.7816 },
+  'charlotte': { state: 'North Carolina', country: 'United States', continent: 'North America', lat: 35.2271, lng: -80.8431 },
+  'pittsburgh': { state: 'Pennsylvania', country: 'United States', continent: 'North America', lat: 40.4406, lng: -79.9959 },
+  'orlando': { state: 'Florida', country: 'United States', continent: 'North America', lat: 28.5383, lng: -81.3792 },
   // US
   'new york': { state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
   'washington': { state: 'DC', country: 'United States', continent: 'North America', lat: 38.9072, lng: -77.0369 },
@@ -650,6 +720,122 @@ const INDIAN_STATES: Record<string, { lat: number; lng: number }> = {
   'Sikkim': { lat: 27.533, lng: 88.5122 },
   'Tripura': { lat: 23.9408, lng: 91.9882 },
   'Arunachal Pradesh': { lat: 28.218, lng: 94.7278 },
+  'Ladakh': { lat: 34.1526, lng: 77.5771 },
+};
+
+// Map country codes (from GNews _hint) to full country info
+const COUNTRY_CODE_MAP: Record<string, { country: string; continent: string; lat: number; lng: number }> = {
+  'in': { country: 'India', continent: 'Asia', lat: 20.5937, lng: 78.9629 },
+  'us': { country: 'United States', continent: 'North America', lat: 38.9072, lng: -77.0369 },
+  'gb': { country: 'United Kingdom', continent: 'Europe', lat: 51.5074, lng: -0.1278 },
+  'au': { country: 'Australia', continent: 'Oceania', lat: -25.2744, lng: 133.7751 },
+  'jp': { country: 'Japan', continent: 'Asia', lat: 36.2048, lng: 138.2529 },
+  'br': { country: 'Brazil', continent: 'South America', lat: -14.235, lng: -51.9253 },
+  'ng': { country: 'Nigeria', continent: 'Africa', lat: 9.082, lng: 8.6753 },
+  'ca': { country: 'Canada', continent: 'North America', lat: 56.1304, lng: -106.3468 },
+  'de': { country: 'Germany', continent: 'Europe', lat: 51.1657, lng: 10.4515 },
+  'fr': { country: 'France', continent: 'Europe', lat: 46.2276, lng: 2.2137 },
+};
+
+// Broader keyword → state mapping for India (city aliases, abbreviations, nicknames)
+const INDIAN_STATE_KEYWORDS: Record<string, string[]> = {
+  'Telangana': ['telangana', 'hyderabad', 'secunderabad', 'warangal', 'nizamabad', 'karimnagar'],
+  'Andhra Pradesh': ['andhra pradesh', 'andhra', 'visakhapatnam', 'vijayawada', 'tirupati', 'guntur', 'amaravati', 'hindupur', 'nellore', 'rajahmundry', 'kakinada', 'vizag'],
+  'Tamil Nadu': ['tamil nadu', 'chennai', 'coimbatore', 'madurai', 'salem', 'tiruchirappalli', 'trichy'],
+  'Karnataka': ['karnataka', 'bengaluru', 'bangalore', 'mysuru', 'mysore', 'hubli', 'mangalore', 'mangaluru'],
+  'Kerala': ['kerala', 'kochi', 'thiruvananthapuram', 'kozhikode', 'thrissur', 'kollam', 'calicut'],
+  'Maharashtra': ['maharashtra', 'mumbai', 'pune', 'nagpur', 'thane', 'nashik', 'aurangabad', 'navi mumbai'],
+  'Gujarat': ['gujarat', 'ahmedabad', 'surat', 'vadodara', 'rajkot', 'gandhinagar'],
+  'Rajasthan': ['rajasthan', 'jaipur', 'jodhpur', 'udaipur', 'kota', 'ajmer', 'bikaner'],
+  'Uttar Pradesh': ['uttar pradesh', 'lucknow', 'varanasi', 'noida', 'agra', 'kanpur', 'prayagraj', 'allahabad', 'meerut', 'ghaziabad', 'greater noida'],
+  'Madhya Pradesh': ['madhya pradesh', 'bhopal', 'indore', 'jabalpur', 'gwalior', 'ujjain'],
+  'Delhi': ['delhi', 'new delhi', 'ncr'],
+  'West Bengal': ['west bengal', 'kolkata', 'calcutta', 'howrah', 'durgapur', 'siliguri'],
+  'Bihar': ['bihar', 'patna', 'gaya', 'muzaffarpur', 'bhagalpur'],
+  'Punjab': ['punjab', 'chandigarh', 'ludhiana', 'amritsar', 'jalandhar', 'patiala'],
+  'Haryana': ['haryana', 'gurugram', 'gurgaon', 'faridabad', 'karnal', 'hisar', 'panipat', 'rohtak', 'sonipat'],
+  'Odisha': ['odisha', 'orissa', 'bhubaneswar', 'cuttack', 'puri', 'rourkela'],
+  'Assam': ['assam', 'guwahati', 'dibrugarh', 'silchar', 'jorhat'],
+  'Jharkhand': ['jharkhand', 'ranchi', 'jamshedpur', 'dhanbad', 'bokaro'],
+  'Chhattisgarh': ['chhattisgarh', 'raipur', 'bilaspur', 'durg', 'bhilai'],
+  'Uttarakhand': ['uttarakhand', 'dehradun', 'haridwar', 'rishikesh', 'nainital'],
+  'Himachal Pradesh': ['himachal', 'shimla', 'manali', 'dharamshala', 'kullu'],
+  'Goa': ['goa', 'panaji', 'margao', 'vasco'],
+  'Jammu and Kashmir': ['jammu', 'kashmir', 'srinagar', 'anantnag', 'baramulla'],
+  'Ladakh': ['ladakh', 'leh', 'kargil'],
+  'Manipur': ['manipur', 'imphal'],
+  'Meghalaya': ['meghalaya', 'shillong', 'tura'],
+  'Tripura': ['tripura', 'agartala'],
+  'Nagaland': ['nagaland', 'kohima', 'dimapur'],
+  'Mizoram': ['mizoram', 'aizawl', 'lunglei'],
+  'Arunachal Pradesh': ['arunachal', 'itanagar', 'tawang'],
+  'Sikkim': ['sikkim', 'gangtok'],
+};
+
+// US state keyword mapping for better US article location resolution
+const US_STATE_KEYWORDS: Record<string, { state: string; lat: number; lng: number }> = {
+  'california': { state: 'California', lat: 36.7783, lng: -119.4179 },
+  'texas': { state: 'Texas', lat: 31.9686, lng: -99.9018 },
+  'florida': { state: 'Florida', lat: 27.6648, lng: -81.5158 },
+  'new york': { state: 'New York', lat: 40.7128, lng: -74.006 },
+  'illinois': { state: 'Illinois', lat: 40.6331, lng: -89.3985 },
+  'pennsylvania': { state: 'Pennsylvania', lat: 41.2033, lng: -77.1945 },
+  'ohio': { state: 'Ohio', lat: 40.4173, lng: -82.9071 },
+  'georgia': { state: 'Georgia', lat: 32.1656, lng: -82.9001 },
+  'michigan': { state: 'Michigan', lat: 44.3148, lng: -85.6024 },
+  'virginia': { state: 'Virginia', lat: 37.4316, lng: -78.6569 },
+  'massachusetts': { state: 'Massachusetts', lat: 42.4072, lng: -71.3824 },
+  'colorado': { state: 'Colorado', lat: 39.5501, lng: -105.7821 },
+  'arizona': { state: 'Arizona', lat: 34.0489, lng: -111.0937 },
+  'tennessee': { state: 'Tennessee', lat: 35.5175, lng: -86.5804 },
+  'maryland': { state: 'Maryland', lat: 39.0458, lng: -76.6413 },
+  'oregon': { state: 'Oregon', lat: 43.8041, lng: -120.5542 },
+  'nevada': { state: 'Nevada', lat: 38.8026, lng: -116.4194 },
+  'minnesota': { state: 'Minnesota', lat: 46.7296, lng: -94.6859 },
+  'wisconsin': { state: 'Wisconsin', lat: 43.7844, lng: -88.7879 },
+  'north carolina': { state: 'North Carolina', lat: 35.7596, lng: -79.0193 },
+  'hawaii': { state: 'Hawaii', lat: 19.8968, lng: -155.5828 },
+  'alabama': { state: 'Alabama', lat: 32.3182, lng: -86.9023 },
+  'alaska': { state: 'Alaska', lat: 64.2008, lng: -152.4937 },
+  'wall street': { state: 'New York', lat: 40.7068, lng: -74.0089 },
+  'pentagon': { state: 'DC', lat: 38.8719, lng: -77.0563 },
+  'white house': { state: 'DC', lat: 38.8977, lng: -77.0365 },
+  'capitol hill': { state: 'DC', lat: 38.8899, lng: -77.0091 },
+  'silicon valley': { state: 'California', lat: 37.3875, lng: -122.0575 },
+};
+
+// Map well-known news sources to locations
+const SOURCE_LOCATION: Record<string, { city: string; state: string; country: string; continent: string; lat: number; lng: number }> = {
+  'ndtv': { city: 'New Delhi', state: 'Delhi', country: 'India', continent: 'Asia', lat: 28.6139, lng: 77.209 },
+  'the hindu': { city: 'Chennai', state: 'Tamil Nadu', country: 'India', continent: 'Asia', lat: 13.0827, lng: 80.2707 },
+  'indian express': { city: 'New Delhi', state: 'Delhi', country: 'India', continent: 'Asia', lat: 28.6139, lng: 77.209 },
+  'hindustan times': { city: 'New Delhi', state: 'Delhi', country: 'India', continent: 'Asia', lat: 28.6139, lng: 77.209 },
+  'times of india': { city: 'Mumbai', state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.076, lng: 72.8777 },
+  'economic times': { city: 'Mumbai', state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.076, lng: 72.8777 },
+  'deccan herald': { city: 'Bengaluru', state: 'Karnataka', country: 'India', continent: 'Asia', lat: 12.9716, lng: 77.5946 },
+  'deccan chronicle': { city: 'Hyderabad', state: 'Telangana', country: 'India', continent: 'Asia', lat: 17.385, lng: 78.4867 },
+  'mint': { city: 'Mumbai', state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.076, lng: 72.8777 },
+  'livemint': { city: 'Mumbai', state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.076, lng: 72.8777 },
+  'zee news': { city: 'Noida', state: 'Uttar Pradesh', country: 'India', continent: 'Asia', lat: 28.5355, lng: 77.391 },
+  'republic': { city: 'Mumbai', state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.076, lng: 72.8777 },
+  'india today': { city: 'New Delhi', state: 'Delhi', country: 'India', continent: 'Asia', lat: 28.6139, lng: 77.209 },
+  'scroll': { city: 'Mumbai', state: 'Maharashtra', country: 'India', continent: 'Asia', lat: 19.076, lng: 72.8777 },
+  'the wire': { city: 'New Delhi', state: 'Delhi', country: 'India', continent: 'Asia', lat: 28.6139, lng: 77.209 },
+  'bbc': { city: 'London', state: 'England', country: 'United Kingdom', continent: 'Europe', lat: 51.5074, lng: -0.1278 },
+  'cnn': { city: 'Atlanta', state: 'Georgia', country: 'United States', continent: 'North America', lat: 33.749, lng: -84.388 },
+  'reuters': { city: 'London', state: 'England', country: 'United Kingdom', continent: 'Europe', lat: 51.5074, lng: -0.1278 },
+  'associated press': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
+  'ap news': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
+  'new york times': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
+  'washington post': { city: 'Washington', state: 'DC', country: 'United States', continent: 'North America', lat: 38.9072, lng: -77.0369 },
+  'fox news': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
+  'nbc news': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
+  'abc news': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
+  'the guardian': { city: 'London', state: 'England', country: 'United Kingdom', continent: 'Europe', lat: 51.5074, lng: -0.1278 },
+  'sky news': { city: 'London', state: 'England', country: 'United Kingdom', continent: 'Europe', lat: 51.5074, lng: -0.1278 },
+  'al jazeera': { city: 'Doha', state: 'Doha', country: 'Qatar', continent: 'Asia', lat: 25.2854, lng: 51.531 },
+  'bloomberg': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
+  'cnbc': { city: 'New York', state: 'New York', country: 'United States', continent: 'North America', lat: 40.7128, lng: -74.006 },
 };
 
 function inferCategory(title: string): string {
@@ -665,69 +851,149 @@ function inferCategory(title: string): string {
 
 function inferLocation(article: RawArticle): { city: string; district: string; state: string; country: string; continent: string; lat: number; lng: number } {
   const text = `${article.title} ${article.description} ${article.source.name}`.toLowerCase();
+  const sourceLower = (article.source?.name || '').toLowerCase();
+  const jitter = (v: number, range = 0.3) => v + (Math.random() - 0.5) * range;
 
-  // 1. Check hint from fetch source (state news)
+  // Helper: title-case a city name
+  const titleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+  // 1. State news hint (from fetch-state-news) — always India with known state
   if (article._hint?.state) {
     const st = article._hint.state;
     const coords = INDIAN_STATES[st] || { lat: 20.5937, lng: 78.9629 };
-    // Try to find a city in this state from MAJOR_CITIES
     for (const [cityName, cityData] of Object.entries(MAJOR_CITIES)) {
       if (cityData.state === st && cityData.country === 'India' && text.includes(cityName)) {
-        return { city: cityName.charAt(0).toUpperCase() + cityName.slice(1), district: '', state: st, country: 'India', continent: 'Asia', lat: cityData.lat, lng: cityData.lng };
+        return { city: titleCase(cityName), district: '', state: st, country: 'India', continent: 'Asia', lat: jitter(cityData.lat), lng: jitter(cityData.lng) };
       }
     }
-    return { city: '', district: '', state: st, country: 'India', continent: 'Asia', lat: coords.lat + (Math.random() - 0.5) * 1, lng: coords.lng + (Math.random() - 0.5) * 1 };
+    return { city: '', district: '', state: st, country: 'India', continent: 'Asia', lat: jitter(coords.lat, 1), lng: jitter(coords.lng, 1) };
   }
 
-  // 2. Check for major cities in text (most specific match first)
-  // Sort by name length descending so "new delhi" matches before "delhi", "san francisco" before "san"
+  // 2. City matching (longest name first: "new delhi" before "delhi", "san francisco" before "san")
   const sortedCities = Object.entries(MAJOR_CITIES).sort((a, b) => b[0].length - a[0].length);
   for (const [cityName, cityData] of sortedCities) {
     if (text.includes(cityName)) {
-      const displayName = cityName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       return {
-        city: displayName, district: '', state: cityData.state,
+        city: titleCase(cityName), district: '', state: cityData.state,
         country: cityData.country, continent: cityData.continent,
-        lat: cityData.lat + (Math.random() - 0.5) * 0.3,
-        lng: cityData.lng + (Math.random() - 0.5) * 0.3,
+        lat: jitter(cityData.lat), lng: jitter(cityData.lng),
       };
     }
   }
 
-  // 3. Check hint for India country
-  if (article._hint?.country === 'in') {
-    for (const [state, coords] of Object.entries(INDIAN_STATES)) {
-      if (text.includes(state.toLowerCase())) {
-        return { city: '', district: '', state, country: 'India', continent: 'Asia', lat: coords.lat + (Math.random() - 0.5) * 1, lng: coords.lng + (Math.random() - 0.5) * 1 };
+  // 3. Country hint from GNews region fetch — use COUNTRY_CODE_MAP
+  const hintCountry = article._hint?.country;
+  if (hintCountry) {
+    const countryInfo = COUNTRY_CODE_MAP[hintCountry];
+    if (countryInfo) {
+      // For India: try broad keyword matching against INDIAN_STATE_KEYWORDS
+      if (hintCountry === 'in') {
+        for (const [state, keywords] of Object.entries(INDIAN_STATE_KEYWORDS)) {
+          for (const kw of keywords) {
+            if (text.includes(kw)) {
+              const stCoords = INDIAN_STATES[state] || { lat: 20.5937, lng: 78.9629 };
+              // Also check if we can resolve a city within this state
+              for (const [cn, cd] of sortedCities) {
+                if (cd.state === state && cd.country === 'India' && text.includes(cn)) {
+                  return { city: titleCase(cn), district: '', state, country: 'India', continent: 'Asia', lat: jitter(cd.lat), lng: jitter(cd.lng) };
+                }
+              }
+              return { city: '', district: '', state, country: 'India', continent: 'Asia', lat: jitter(stCoords.lat, 1), lng: jitter(stCoords.lng, 1) };
+            }
+          }
+        }
+        // India source name fallback — check SOURCE_LOCATION
+        for (const [src, loc] of Object.entries(SOURCE_LOCATION)) {
+          if (sourceLower.includes(src) && loc.country === 'India') {
+            return { city: loc.city, district: '', state: loc.state, country: loc.country, continent: loc.continent, lat: jitter(loc.lat), lng: jitter(loc.lng) };
+          }
+        }
+        // Generic India — scatter across India
+        return { city: '', district: '', state: '', country: 'India', continent: 'Asia', lat: jitter(20.5937, 10), lng: jitter(78.9629, 10) };
+      }
+
+      // For US: try US_STATE_KEYWORDS matching
+      if (hintCountry === 'us') {
+        // Sort by key length descending to match "north carolina" before "carolina"
+        const sortedUSStates = Object.entries(US_STATE_KEYWORDS).sort((a, b) => b[0].length - a[0].length);
+        for (const [kw, stInfo] of sortedUSStates) {
+          if (text.includes(kw)) {
+            return { city: '', district: '', state: stInfo.state, country: 'United States', continent: 'North America', lat: jitter(stInfo.lat, 1), lng: jitter(stInfo.lng, 1) };
+          }
+        }
+        // US source name fallback
+        for (const [src, loc] of Object.entries(SOURCE_LOCATION)) {
+          if (sourceLower.includes(src) && loc.country === 'United States') {
+            return { city: loc.city, district: '', state: loc.state, country: loc.country, continent: loc.continent, lat: jitter(loc.lat), lng: jitter(loc.lng) };
+          }
+        }
+        return { city: '', district: '', state: '', country: 'United States', continent: 'North America', lat: jitter(38.9, 12), lng: jitter(-98.35, 15) };
+      }
+
+      // For UK: try common city names
+      if (hintCountry === 'gb') {
+        for (const [src, loc] of Object.entries(SOURCE_LOCATION)) {
+          if (sourceLower.includes(src) && loc.country === 'United Kingdom') {
+            return { city: loc.city, district: '', state: loc.state, country: loc.country, continent: loc.continent, lat: jitter(loc.lat), lng: jitter(loc.lng) };
+          }
+        }
+        return { city: '', district: '', state: '', country: countryInfo.country, continent: countryInfo.continent, lat: jitter(countryInfo.lat, 3), lng: jitter(countryInfo.lng, 3) };
+      }
+
+      // All other countries with hint
+      return { city: '', district: '', state: '', country: countryInfo.country, continent: countryInfo.continent, lat: jitter(countryInfo.lat, 3), lng: jitter(countryInfo.lng, 3) };
+    }
+  }
+
+  // 4. No hint — try Indian state keywords in text (for articles without country hint)
+  for (const [state, keywords] of Object.entries(INDIAN_STATE_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (text.includes(kw)) {
+        const stCoords = INDIAN_STATES[state] || { lat: 20.5937, lng: 78.9629 };
+        return { city: '', district: '', state, country: 'India', continent: 'Asia', lat: jitter(stCoords.lat, 1), lng: jitter(stCoords.lng, 1) };
       }
     }
-    return { city: '', district: '', state: '', country: 'India', continent: 'Asia', lat: 20.5937 + (Math.random() - 0.5) * 10, lng: 78.9629 + (Math.random() - 0.5) * 10 };
   }
 
-  // 4. Check for known countries in text
-  for (const [country, coords] of Object.entries(COUNTRY_COORDS)) {
-    if (text.includes(country.toLowerCase())) {
-      return { city: '', district: '', state: '', country, continent: coords.continent, lat: coords.lat + (Math.random() - 0.5) * 3, lng: coords.lng + (Math.random() - 0.5) * 3 };
+  // 5. Try US state keywords
+  const sortedUSStates = Object.entries(US_STATE_KEYWORDS).sort((a, b) => b[0].length - a[0].length);
+  for (const [kw, stInfo] of sortedUSStates) {
+    if (text.includes(kw)) {
+      return { city: '', district: '', state: stInfo.state, country: 'United States', continent: 'North America', lat: jitter(stInfo.lat, 1), lng: jitter(stInfo.lng, 1) };
     }
   }
 
-  // 5. Check source domain TLD
+  // 6. Check for known countries in text
+  for (const [country, coords] of Object.entries(COUNTRY_COORDS)) {
+    if (text.includes(country.toLowerCase())) {
+      return { city: '', district: '', state: '', country, continent: coords.continent, lat: jitter(coords.lat, 3), lng: jitter(coords.lng, 3) };
+    }
+  }
+
+  // 7. Source name → location (known news outlets)
+  for (const [src, loc] of Object.entries(SOURCE_LOCATION)) {
+    if (sourceLower.includes(src)) {
+      return { city: loc.city, district: '', state: loc.state, country: loc.country, continent: loc.continent, lat: jitter(loc.lat), lng: jitter(loc.lng) };
+    }
+  }
+
+  // 8. Source domain TLD
   try {
-    const domain = article.source.url ? new URL(article.url).hostname : article.source.name;
+    const domain = article.url ? new URL(article.url).hostname : article.source.name;
     for (const [tld, loc] of Object.entries(TLD_COUNTRY)) {
       if (domain.endsWith(`.${tld}`)) {
-        return { city: '', district: '', state: '', country: loc.country, continent: loc.continent, lat: loc.lat + (Math.random() - 0.5) * 3, lng: loc.lng + (Math.random() - 0.5) * 3 };
+        return { city: '', district: '', state: '', country: loc.country, continent: loc.continent, lat: jitter(loc.lat, 3), lng: jitter(loc.lng, 3) };
       }
     }
     if (domain.endsWith('.com') || domain.endsWith('.org') || domain.endsWith('.net')) {
-      return { city: '', district: '', state: '', country: 'United States', continent: 'North America', lat: 38.9 + (Math.random() - 0.5) * 15, lng: -98.35 + (Math.random() - 0.5) * 15 };
+      return { city: '', district: '', state: '', country: 'United States', continent: 'North America', lat: jitter(38.9, 15), lng: jitter(-98.35, 15) };
     }
   } catch { /* ignore */ }
 
-  // 6. Scatter globally as fallback
+  // 9. Global fallback — scatter across known countries
   const fallbacks = Object.values(COUNTRY_COORDS);
   const pick = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-  return { city: '', district: '', state: '', country: 'Unknown', continent: pick.continent, lat: pick.lat + (Math.random() - 0.5) * 8, lng: pick.lng + (Math.random() - 0.5) * 8 };
+  return { city: '', district: '', state: '', country: 'Unknown', continent: pick.continent, lat: jitter(pick.lat, 8), lng: jitter(pick.lng, 8) };
 }
 
 // ─── Combine raw articles with local analysis + location inference ───

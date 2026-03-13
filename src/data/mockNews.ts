@@ -567,6 +567,7 @@ export interface GlobeMarker {
   lat: number;
   lng: number;
   city: string;
+  state: string;
   country: string;
   continent: string;
   sentiment: Sentiment;
@@ -592,6 +593,7 @@ export function getGlobeMarkers(articles: NewsArticle[] = mockArticles): GlobeMa
       lat: top.location.lat,
       lng: top.location.lng,
       city: top.location.city,
+      state: top.location.state || '',
       country: top.location.country,
       continent: top.location.continent,
       sentiment,
