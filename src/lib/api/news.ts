@@ -87,6 +87,7 @@ export async function analyzeCredibility(article: NewsArticle) {
     title: article.headline,
     description: article.summary,
     content: article.fullText,
+    source: article.source || '',
     type: 'credibility',
   });
 

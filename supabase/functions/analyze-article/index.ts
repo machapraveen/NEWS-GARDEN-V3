@@ -212,8 +212,8 @@ function analyzeCredibilityLocal(title: string, content: string, sourceName: str
     explanation = `Credibility analysis based on ${words.length} words: source reputation, language patterns, and journalistic indicators.`;
   }
 
-  // If no red flags found at all, note that
-  if (redFlags.length === 0 && score < 75) {
+  // If no red flags found at all and source is unverified, note that
+  if (redFlags.length === 0 && score < 75 && sourceVerdict === 'unverified') {
     redFlags.push('Source not in our verified database — credibility unconfirmed');
   }
 
