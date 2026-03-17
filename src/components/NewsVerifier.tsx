@@ -11,7 +11,9 @@ interface VerifyResult {
   explanation: string;
   redFlags: string[];
   models?: {
+    nlpEngine?: { score: number; verdict: string };
     gemini?: { score: number; verdict: string };
+    sourceCheck?: { score: number; verdict: string };
   };
 }
 
@@ -141,18 +143,32 @@ export default function NewsVerifier() {
             <div className="rounded-md border border-white/[0.06] bg-white/[0.03] p-2">
               <div className="flex items-center gap-1 mb-1">
                 <Bot className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-semibold text-muted-foreground">Source Check</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">
+                  {result.models?.gemini ? 'Gemini AI' : 'Source Check'}
+                </span>
               </div>
-              {result.models?.nlpEngine || result.models?.gemini ? (
+              {result.models?.gemini ? (
                 <>
                   <span className={`text-xs font-bold ${
-                    (result.models.nlpEngine?.verdict || result.models.gemini?.verdict) === "credible" ? "text-emerald-400" :
-                    (result.models.nlpEngine?.verdict || result.models.gemini?.verdict) === "suspicious" ? "text-amber-400" : "text-red-400"
+                    result.models.gemini.verdict === "credible" ? "text-emerald-400" :
+                    result.models.gemini.verdict === "suspicious" ? "text-amber-400" : "text-red-400"
                   }`}>
-                    {result.models.nlpEngine?.verdict || result.models.gemini?.verdict}
+                    {result.models.gemini.verdict}
                   </span>
                   <span className="text-[10px] text-muted-foreground ml-1">
-                    ({result.models.nlpEngine?.score || result.models.gemini?.score}/100)
+                    ({result.models.gemini.score}/100)
+                  </span>
+                </>
+              ) : result.models?.sourceCheck ? (
+                <>
+                  <span className={`text-xs font-bold ${
+                    result.models.sourceCheck.verdict === "reputable" ? "text-emerald-400" :
+                    result.models.sourceCheck.verdict === "unreliable" ? "text-red-400" : "text-amber-400"
+                  }`}>
+                    {result.models.sourceCheck.verdict}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground ml-1">
+                    ({result.models.sourceCheck.score}/100)
                   </span>
                 </>
               ) : (

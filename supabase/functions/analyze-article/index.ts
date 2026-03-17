@@ -270,6 +270,74 @@ function inferCategory(text: string): string {
   return best;
 }
 
+// ─── Gemini AI enhancement (optional — keyword engine is primary) ───
+async function callGeminiCredibility(title: string, content: string, apiKey: string): Promise<{ score: number; verdict: string; explanation: string; redFlags: string[] } | null> {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `You are a fake news detection AI. Analyze this article for credibility.
+
+Title: ${title}
+Content: ${content.slice(0, 2000)}
+
+Return ONLY valid JSON (no markdown) with:
+- credibilityScore: number 0-100
+- verdict: "credible", "suspicious", or "likely_fake"
+- explanation: 1-2 sentences explaining your assessment
+- redFlags: array of strings listing any concerns` }] }],
+          generationConfig: { temperature: 0.3 },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Gemini API error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (parsed && typeof parsed.credibilityScore === 'number') {
+        return {
+          score: parsed.credibilityScore,
+          verdict: parsed.verdict || 'unknown',
+          explanation: parsed.explanation || '',
+          redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
+        };
+      }
+    } catch { /* JSON parse failed */ }
+
+    // Try extracting JSON object from text
+    const objMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      try {
+        const parsed = JSON.parse(objMatch[0]);
+        if (parsed && typeof parsed.credibilityScore === 'number') {
+          return {
+            score: parsed.credibilityScore,
+            verdict: parsed.verdict || 'unknown',
+            explanation: parsed.explanation || '',
+            redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
+          };
+        }
+      } catch { /* give up */ }
+    }
+
+    return null;
+  } catch (err) {
+    console.error('Gemini call failed:', err);
+    return null;
+  }
+}
+
 // ─── Main Handler ───
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -278,10 +346,11 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     const isBatch = Array.isArray(body.articles);
 
     if (isBatch) {
-      // Batch analysis
+      // Batch analysis — keyword engine only (fast)
       const results = body.articles.map((a: any) => {
         const text = `${a.title || ''} ${a.description || ''} ${a.content || ''}`;
         const { sentiment, sentimentScore } = analyzeSentiment(text);
@@ -301,12 +370,48 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else if (body.type === 'credibility') {
-      // Single article credibility check (used by Verify News)
+      // Single article credibility — keyword engine + Gemini enhancement
       const { title, description, content } = body;
       const articleText = content || description || title || '';
       const sourceName = body.source || '';
-      const result = analyzeCredibilityLocal(title || articleText, articleText, sourceName);
-      return new Response(JSON.stringify(result), {
+
+      // Step 1: Keyword engine (instant, always works)
+      const kwResult = analyzeCredibilityLocal(title || articleText, articleText, sourceName);
+
+      // Step 2: Try Gemini enhancement (if key available)
+      let geminiData: { score: number; verdict: string; explanation: string; redFlags: string[] } | null = null;
+      if (GEMINI_API_KEY) {
+        geminiData = await callGeminiCredibility(title || articleText, articleText, GEMINI_API_KEY);
+      }
+
+      // Step 3: Combine — if Gemini succeeded, blend 50/50 with keyword engine
+      if (geminiData) {
+        const blendedScore = Math.round(kwResult.credibilityScore * 0.4 + geminiData.score * 0.6);
+        const finalScore = Math.max(5, Math.min(98, blendedScore));
+        const verdict = finalScore > 75 ? 'credible' : finalScore > 45 ? 'suspicious' : 'likely_fake';
+        const bertLabel = finalScore >= 65 ? 'Real' : finalScore >= 40 ? 'Uncertain' : 'Fake';
+
+        // Merge red flags (deduplicated)
+        const allFlags = [...new Set([...kwResult.redFlags, ...geminiData.redFlags])];
+
+        return new Response(JSON.stringify({
+          credibilityScore: finalScore,
+          bertConfidence: finalScore / 100,
+          bertLabel,
+          verdict,
+          explanation: geminiData.explanation || kwResult.explanation,
+          redFlags: allFlags,
+          models: {
+            nlpEngine: { score: kwResult.credibilityScore, verdict: kwResult.verdict },
+            gemini: { score: geminiData.score, verdict: geminiData.verdict },
+          },
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Gemini unavailable — return keyword engine result only
+      return new Response(JSON.stringify(kwResult), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else {
