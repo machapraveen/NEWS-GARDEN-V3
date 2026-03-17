@@ -125,11 +125,12 @@ export default function NewsVerifier() {
             <div className="rounded-md border border-white/[0.06] bg-white/[0.03] p-2">
               <div className="flex items-center gap-1 mb-1">
                 <Brain className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-semibold text-muted-foreground">RoBERTa</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">NLP Engine</span>
               </div>
               <span className={`text-xs font-bold ${
                 result.bertLabel === "Real" ? "text-emerald-400" :
-                result.bertLabel === "Fake" ? "text-red-400" : "text-muted-foreground"
+                result.bertLabel === "Fake" ? "text-red-400" :
+                result.bertLabel === "Uncertain" ? "text-amber-400" : "text-muted-foreground"
               }`}>
                 {result.bertLabel === "unknown" ? "Analyzing..." : result.bertLabel}
               </span>
@@ -140,18 +141,18 @@ export default function NewsVerifier() {
             <div className="rounded-md border border-white/[0.06] bg-white/[0.03] p-2">
               <div className="flex items-center gap-1 mb-1">
                 <Bot className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-semibold text-muted-foreground">Gemini AI</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">Source Check</span>
               </div>
-              {result.models?.gemini ? (
+              {result.models?.nlpEngine || result.models?.gemini ? (
                 <>
                   <span className={`text-xs font-bold ${
-                    result.models.gemini.verdict === "credible" ? "text-emerald-400" :
-                    result.models.gemini.verdict === "suspicious" ? "text-amber-400" : "text-red-400"
+                    (result.models.nlpEngine?.verdict || result.models.gemini?.verdict) === "credible" ? "text-emerald-400" :
+                    (result.models.nlpEngine?.verdict || result.models.gemini?.verdict) === "suspicious" ? "text-amber-400" : "text-red-400"
                   }`}>
-                    {result.models.gemini.verdict}
+                    {result.models.nlpEngine?.verdict || result.models.gemini?.verdict}
                   </span>
                   <span className="text-[10px] text-muted-foreground ml-1">
-                    ({result.models.gemini.score}/100)
+                    ({result.models.nlpEngine?.score || result.models.gemini?.score}/100)
                   </span>
                 </>
               ) : (
