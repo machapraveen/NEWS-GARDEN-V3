@@ -299,7 +299,7 @@ export default function ArticleDetail() {
                               </Badge>
                             </div>
                           )}
-                          <p className="text-[10px] text-muted-foreground/60">Gemini 2.0 Flash credibility assessment</p>
+                          <p className="text-[10px] text-muted-foreground/60">Gemini 3.8 Flash credibility assessment</p>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
