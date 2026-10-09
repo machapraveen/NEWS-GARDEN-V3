@@ -3,7 +3,13 @@ import GlobeGL from "react-globe.gl";
 import * as THREE from "three";
 import { GlobeMarker, getGlobeMarkers, Category, NewsArticle } from "@/data/mockNews";
 import { generateNewsArcs, type NewsArc } from "@/data/globeArcs";
-import { COUNTRIES_DATA, type CountryInfo } from "@/data/countriesData";
+import { GLOBAL_NEWS_CABLES } from "@/data/globePaths";
+import {
+  COUNTRIES_DATA,
+  type CountryInfo,
+  type GeopoliticalRegion,
+  REGION_CENTERS,
+} from "@/data/countriesData";
 import GlobeVisualControls, {
   type GlobeViewMode,
   type GlobeTheme,
@@ -37,14 +43,25 @@ const SENTIMENT_BORDER = {
   negative: "rgba(244, 63, 94, 0.5)",
 };
 
-// ─── Basemap Textures & Assets ───
-const THEME_TEXTURES = {
+// ─── Basemap Textures & Assets (vasturiano/globe.gl showcase environments) ───
+const THEME_TEXTURES: Record<
+  GlobeTheme,
+  {
+    globe: string;
+    bump: string;
+    bg: string;
+    atmosphere: string;
+    altitude: number;
+    showGlobe: boolean;
+  }
+> = {
   night: {
     globe: "//unpkg.com/three-globe/example/img/earth-night.jpg",
     bump: "//unpkg.com/three-globe/example/img/earth-topology.png",
     bg: "//unpkg.com/three-globe/example/img/night-sky.png",
     atmosphere: "#06b6d4",
     altitude: 0.22,
+    showGlobe: true,
   },
   day: {
     globe: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
@@ -52,6 +69,7 @@ const THEME_TEXTURES = {
     bg: "//unpkg.com/three-globe/example/img/night-sky.png",
     atmosphere: "#38bdf8",
     altitude: 0.28,
+    showGlobe: true,
   },
   cyber: {
     globe: "//unpkg.com/three-globe/example/img/earth-dark.jpg",
@@ -59,6 +77,15 @@ const THEME_TEXTURES = {
     bg: "//unpkg.com/three-globe/example/img/night-sky.png",
     atmosphere: "#10b981",
     altitude: 0.18,
+    showGlobe: true,
+  },
+  hologram: {
+    globe: "",
+    bump: "",
+    bg: "//unpkg.com/three-globe/example/img/night-sky.png",
+    atmosphere: "rgba(20, 184, 166, 0.4)",
+    altitude: 0.15,
+    showGlobe: false, // Transparent hollow hologram (vasturiano hollow-globe example)
   },
 };
 
@@ -78,7 +105,15 @@ export default function Globe({
   const [theme, setTheme] = useState<GlobeTheme>("night");
   const [autoRotate, setAutoRotate] = useState(true);
   const [showAtmosphere, setShowAtmosphere] = useState(true);
+
+  // Planetary FX
   const [showClouds, setShowClouds] = useState(true);
+  const [showShield, setShowShield] = useState(false);
+  const [enableClickArcs, setEnableClickArcs] = useState(true);
+  const [clickArcs, setClickArcs] = useState<any[]>([]);
+  const [clickRings, setClickRings] = useState<any[]>([]);
+  const prevCoordsRef = useRef<{ lat: number; lng: number }>({ lat: 20, lng: 0 });
+
   const cloudsMeshRef = useRef<THREE.Mesh | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
@@ -100,7 +135,7 @@ export default function Globe({
     setMarkers(getGlobeMarkers(filtered));
   }, [selectedCategory, articles]);
 
-  // Load World GeoJSON dataset for Country Choropleth Mode
+  // Load World GeoJSON dataset for Country Choropleth & Hex Matrix Mode
   useEffect(() => {
     let isMounted = true;
     const loadGeoJson = async () => {
@@ -175,6 +210,12 @@ export default function Globe({
     return generateNewsArcs(markers);
   }, [markers]);
 
+  // Combined arcs: static news arcs + interactive click-to-emit laser arcs
+  const activeArcs = useMemo(() => {
+    const base = viewMode === "arcs" ? arcs : [];
+    return [...base, ...clickArcs];
+  }, [viewMode, arcs, clickArcs]);
+
   // HexBin raw data points
   const hexPoints = useMemo(() => {
     return articles.map((a) => ({
@@ -185,6 +226,26 @@ export default function Globe({
       sentiment: a.sentiment,
     }));
   }, [articles]);
+
+  // Planetary Shield ring (vasturiano earth-shield example)
+  const shieldRing = useMemo(
+    () => ({
+      lat: 90,
+      lng: 0,
+      isShield: true,
+      sentiment: "positive" as const,
+      articleCount: 10,
+    }),
+    []
+  );
+
+  // Combined rings: markers + arrival ripples + planetary shield
+  const activeRings = useMemo(() => {
+    const list: any[] = viewMode === "beacons" ? [...markers] : [];
+    if (clickRings.length > 0) list.push(...clickRings);
+    if (showShield) list.push(shieldRing);
+    return list;
+  }, [viewMode, markers, clickRings, showShield, shieldRing]);
 
   // Window resize listener
   useEffect(() => {
@@ -285,9 +346,9 @@ export default function Globe({
   // Sync clouds visibility with state toggle
   useEffect(() => {
     if (cloudsMeshRef.current) {
-      cloudsMeshRef.current.visible = showClouds;
+      cloudsMeshRef.current.visible = showClouds && theme !== "hologram";
     }
-  }, [showClouds]);
+  }, [showClouds, theme]);
 
   // Synchronize auto-rotation
   useEffect(() => {
@@ -330,7 +391,7 @@ export default function Globe({
     [onMarkerClick]
   );
 
-  // Polygon click handler (Choropleth Mode)
+  // Polygon click handler (Choropleth & Hex Matrix Mode)
   const handlePolygonClick = useCallback(
     (polygon: any) => {
       if (!polygon?.properties) return;
@@ -359,6 +420,51 @@ export default function Globe({
     [onSelectCountry]
   );
 
+  // Interactive Click-to-Emit Laser Flight Arcs (vasturiano emit-arcs-on-click example)
+  const handleGlobeClick = useCallback(
+    ({ lat, lng }: { lat: number; lng: number }) => {
+      if (!enableClickArcs) return;
+
+      const startLat = prevCoordsRef.current.lat;
+      const startLng = prevCoordsRef.current.lng;
+      const endLat = lat;
+      const endLng = lng;
+
+      prevCoordsRef.current = { lat, lng };
+
+      const newArc = {
+        startLat,
+        startLng,
+        endLat,
+        endLng,
+        color: ["#38bdf8", "#f43f5e"],
+        altitude: 0.32,
+        stroke: 1.6,
+        dashInitialGap: 0,
+        dashAnimateTime: 1200,
+        isClickPulse: true,
+      };
+
+      setClickArcs((prev) => [...prev, newArc]);
+      setTimeout(() => {
+        setClickArcs((prev) => prev.filter((a) => a !== newArc));
+      }, 2400);
+
+      const targetRing = {
+        lat: endLat,
+        lng: endLng,
+        sentiment: "positive" as const,
+        articleCount: 4,
+        isTargetRipple: true,
+      };
+      setClickRings((prev) => [...prev, targetRing]);
+      setTimeout(() => {
+        setClickRings((prev) => prev.filter((r) => r !== targetRing));
+      }, 2200);
+    },
+    [enableClickArcs]
+  );
+
   // Camera toolbar helpers
   const handleZoomIn = useCallback(() => {
     if (!globeRef.current) return;
@@ -383,28 +489,45 @@ export default function Globe({
     globeRef.current.pointOfView({ lat: 20, lng: 0, altitude: 2.3 }, 1000);
   }, []);
 
+  // Quick Cinematic Regional Focus
+  const handleSelectRegion = useCallback((region: GeopoliticalRegion) => {
+    const coords = REGION_CENTERS[region] || REGION_CENTERS["All"];
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = false;
+      setAutoRotate(false);
+      globeRef.current.pointOfView(coords, 1400);
+    }
+  }, []);
+
   const currentTexture = THEME_TEXTURES[theme];
 
   return (
     <div ref={containerRef} className="w-full h-full relative">
       <GlobeGL
         ref={globeRef}
+        showGlobe={currentTexture.showGlobe}
         globeImageUrl={currentTexture.globe}
         bumpImageUrl={currentTexture.bump}
         backgroundImageUrl={currentTexture.bg}
+        onGlobeClick={handleGlobeClick}
         // ── Atmosphere Glow ──
+        showAtmosphere={theme === "hologram" ? false : showAtmosphere}
         atmosphereColor={showAtmosphere ? currentTexture.atmosphere : "transparent"}
         atmosphereAltitude={showAtmosphere ? currentTexture.altitude : 0}
-        // ── 1. Points / Beacons Layer (Active in 'beacons', 'arcs', 'labels', 'hexmatrix') ──
+        // ── 1. Points / Beacons Layer (Active in 'beacons', 'arcs', 'labels', 'hexmatrix', 'cables') ──
         pointsData={
-          viewMode === "beacons" || viewMode === "arcs" || viewMode === "labels" || viewMode === "hexmatrix"
+          viewMode === "beacons" ||
+          viewMode === "arcs" ||
+          viewMode === "labels" ||
+          viewMode === "hexmatrix" ||
+          viewMode === "cables"
             ? markers
             : []
         }
         pointLat="lat"
         pointLng="lng"
         pointColor={(d: object) => SENTIMENT_COLORS[(d as GlobeMarker).sentiment]}
-        pointAltitude={0.005} // Surface-level glowing bead, zero spiky cylinders!
+        pointAltitude={0.005} // Surface-level glowing bead, zero spiky cylinders
         pointRadius={(d: object) => {
           const count = (d as GlobeMarker).articleCount || 1;
           return Math.min(1.15, 0.38 + Math.log10(count + 1) * 0.42);
@@ -413,24 +536,27 @@ export default function Globe({
         pointsMerge={false}
         onPointClick={handleMarkerClick}
         pointLabel={(d: object) => renderMarkerTooltip(d as GlobeMarker)}
-        // ── 2. Pulsing Sentiment Waves (Radar Ripples across planet crust) ──
-        ringsData={viewMode === "beacons" ? markers : []}
+        // ── 2. Pulsing Sentiment Waves & Planetary Shield ──
+        ringsData={activeRings}
         ringLat="lat"
         ringLng="lng"
-        ringColor={(d: object) => {
+        ringAltitude={(d: any) => (d.isShield ? 0.22 : 0.003)}
+        ringColor={(d: any) => {
+          if (d.isShield) return () => "rgba(6, 182, 212, 0.45)";
           const m = d as GlobeMarker;
-          const c = SENTIMENT_COLORS[m.sentiment];
+          const c = SENTIMENT_COLORS[m.sentiment] || "#10b981";
           return [c, "rgba(0,0,0,0)"];
         }}
-        ringMaxRadius={(d: object) => {
+        ringMaxRadius={(d: any) => {
+          if (d.isShield) return 180;
           const m = d as GlobeMarker;
           const boost = showHeatmap ? 1.5 : 1.0;
-          return (2.2 + Math.min(3.2, Math.log10(m.articleCount + 1) * 2.0)) * boost;
+          return (2.2 + Math.min(3.2, Math.log10((m.articleCount || 1) + 1) * 2.0)) * boost;
         }}
-        ringPropagationSpeed={showHeatmap ? 1.6 : 1.1}
-        ringRepeatPeriod={showHeatmap ? 1400 : 2000}
-        // ── 3. Wire Transmission Arcs Layer ('arcs' Mode) ──
-        arcsData={viewMode === "arcs" ? arcs : []}
+        ringPropagationSpeed={(d: any) => (d.isShield ? 20 : showHeatmap ? 1.6 : 1.1)}
+        ringRepeatPeriod={(d: any) => (d.isShield ? 2400 : showHeatmap ? 1400 : 2000)}
+        // ── 3. Wire Transmission Arcs & Interactive Photon Lasers ('arcs' Mode & Globe Clicks) ──
+        arcsData={activeArcs}
         arcStartLat="startLat"
         arcStartLng="startLng"
         arcEndLat="endLat"
@@ -443,11 +569,24 @@ export default function Globe({
         arcDashInitialGap={(d: object) => (d as NewsArc).dashInitialGap}
         arcDashAnimateTime={(d: object) => (d as NewsArc).dashAnimateTime}
         arcLabel={(d: object) => renderArcTooltip(d as NewsArc)}
+        arcsTransitionDuration={300}
         onArcClick={(d: object) => {
           const arc = d as NewsArc;
-          handleMarkerClick(arc.destinationMarker);
+          if (arc.destinationMarker) handleMarkerClick(arc.destinationMarker);
         }}
-        // ── 4. Hexagonal Density Towers ('hexbin' Mode) ──
+        // ── 4. Inter-Continental Fiber News Conduits ('cables' Mode - vasturiano submarine-cables) ──
+        pathsData={viewMode === "cables" ? GLOBAL_NEWS_CABLES : []}
+        pathPoints="coords"
+        pathPointLat={(p: any) => p[1]}
+        pathPointLng={(p: any) => p[0]}
+        pathColor={(d: any) => d.color}
+        pathStroke={2.4}
+        pathDashLength={0.14}
+        pathDashGap={0.015}
+        pathDashAnimateTime={8000}
+        pathLabel={(d: any) => `<b>🌐 ${d.name}</b><br/><i>${d.region} Continental Concourse</i>`}
+        pathTransitionDuration={300}
+        // ── 5. Hexagonal Density Towers ('hexbin' Mode - vasturiano world-population) ──
         hexBinPointsData={viewMode === "hexbin" ? hexPoints : []}
         hexBinPointLat="lat"
         hexBinPointLng="lng"
@@ -457,6 +596,7 @@ export default function Globe({
         hexTopColor={(d: any) => getHexDominantColor(d.points)}
         hexSideColor={(d: any) => getHexDominantColor(d.points, 0.45)}
         hexLabel={(d: any) => renderHexTooltip(d)}
+        hexTransitionDuration={300}
         onHexClick={(d: any) => {
           if (d.points?.[0]?.article) {
             const m = markers.find(
@@ -466,7 +606,7 @@ export default function Globe({
             if (m) handleMarkerClick(m);
           }
         }}
-        // ── 5. Choropleth Country Polygons ('polygons' Mode) ──
+        // ── 6. Choropleth Country Polygons ('polygons' Mode - vasturiano choropleth-countries) ──
         polygonsData={viewMode === "polygons" ? geoCountries : []}
         polygonGeoJsonGeometry="geometry"
         polygonCapColor={(d: any) => {
@@ -475,21 +615,21 @@ export default function Globe({
           const stats = getCountryStats(d, countryStatsMap);
           if (stats && stats.total > 0) {
             return stats.dominant === "positive"
-              ? "rgba(16, 185, 129, 0.5)"
+              ? "rgba(16, 185, 129, 0.55)"
               : stats.dominant === "negative"
-              ? "rgba(244, 63, 94, 0.5)"
-              : "rgba(245, 158, 11, 0.5)";
+              ? "rgba(244, 63, 94, 0.55)"
+              : "rgba(245, 158, 11, 0.55)";
           }
-          return "rgba(255, 255, 255, 0.04)";
+          return "rgba(255, 255, 255, 0.06)";
         }}
         polygonSideColor={(d: any) => {
           const stats = getCountryStats(d, countryStatsMap);
           if (stats && stats.total > 0) {
             return stats.dominant === "positive"
-              ? "rgba(16, 185, 129, 0.2)"
+              ? "rgba(16, 185, 129, 0.25)"
               : stats.dominant === "negative"
-              ? "rgba(244, 63, 94, 0.2)"
-              : "rgba(245, 158, 11, 0.2)";
+              ? "rgba(244, 63, 94, 0.25)"
+              : "rgba(245, 158, 11, 0.25)";
           }
           return "rgba(255, 255, 255, 0.02)";
         }}
@@ -498,42 +638,44 @@ export default function Globe({
           if (isHovered) return "rgba(6, 182, 212, 1.0)";
           const stats = getCountryStats(d, countryStatsMap);
           return stats && stats.total > 0
-            ? "rgba(255, 255, 255, 0.45)"
-            : "rgba(255, 255, 255, 0.12)";
+            ? "rgba(255, 255, 255, 0.5)"
+            : "rgba(255, 255, 255, 0.15)";
         }}
         polygonAltitude={(d: any) => {
-          if (hoveredPolygon === d) return 0.07;
+          if (hoveredPolygon === d) return 0.12; // Smooth elevated lift on hover (vasturiano style)
           const stats = getCountryStats(d, countryStatsMap);
           return stats && stats.total > 0
-            ? Math.min(0.04, 0.015 + stats.total * 0.003)
-            : 0.003;
+            ? Math.min(0.06, 0.02 + stats.total * 0.004)
+            : 0.005;
         }}
         polygonCapCurvatureResolution={3}
+        polygonsTransitionDuration={300}
         onPolygonHover={setHoveredPolygon}
         onPolygonClick={handlePolygonClick}
         polygonLabel={(d: any) => renderPolygonTooltip(d, countryStatsMap)}
-        // ── 5b. Cybernetic Hex Matrix Mode ('hexmatrix' Mode - vasturiano style) ──
+        // ── 7. Cybernetic Hex Matrix Mode ('hexmatrix' Mode - vasturiano hexed-polygons) ──
         hexPolygonsData={viewMode === "hexmatrix" ? geoCountries : []}
         hexPolygonGeoJsonGeometry="geometry"
         hexPolygonColor={(d: any) => {
           const stats = getCountryStats(d, countryStatsMap);
           if (stats && stats.total > 0) {
             return stats.dominant === "positive"
-              ? "rgba(16, 185, 129, 0.75)"
+              ? "rgba(16, 185, 129, 0.8)"
               : stats.dominant === "negative"
-              ? "rgba(244, 63, 94, 0.75)"
-              : "rgba(245, 158, 11, 0.75)";
+              ? "rgba(244, 63, 94, 0.8)"
+              : "rgba(245, 158, 11, 0.8)";
           }
-          return "rgba(255, 255, 255, 0.12)";
+          return "rgba(255, 255, 255, 0.14)";
         }}
         hexPolygonAltitude={0.008}
         hexPolygonResolution={3}
         hexPolygonMargin={0.28}
         hexPolygonUseDots={true}
+        hexPolygonsTransitionDuration={300}
         onHexPolygonClick={handlePolygonClick}
         hexPolygonLabel={(d: any) => renderPolygonTooltip(d, countryStatsMap)}
-        // ── 6. 3D Floating Typography Labels ('labels' Mode) ──
-        labelsData={viewMode === "labels" ? markers.slice(0, 24) : []}
+        // ── 8. 3D Floating Typography Labels ('labels' Mode) ──
+        labelsData={viewMode === "labels" ? markers.slice(0, 32) : []}
         labelLat="lat"
         labelLng="lng"
         labelText={(d: any) => `${d.city || d.country}`}
@@ -544,6 +686,7 @@ export default function Globe({
         labelColor={(d: any) => SENTIMENT_COLORS[d.sentiment]}
         labelAltitude={0.015}
         labelResolution={3}
+        labelsTransitionDuration={300}
         onLabelClick={handleMarkerClick}
         // ── Window Dimensions ──
         animateIn={true}
@@ -566,6 +709,11 @@ export default function Globe({
         onToggleAtmosphere={() => setShowAtmosphere(!showAtmosphere)}
         showClouds={showClouds}
         onToggleClouds={() => setShowClouds(!showClouds)}
+        showShield={showShield}
+        onToggleShield={() => setShowShield(!showShield)}
+        enableClickArcs={enableClickArcs}
+        onToggleClickArcs={() => setEnableClickArcs(!enableClickArcs)}
+        onSelectRegion={handleSelectRegion}
         totalArticles={articles.length}
       />
     </div>
@@ -581,198 +729,184 @@ function renderMarkerTooltip(m: GlobeMarker): string {
   const categoryBadge = m.topArticle.category;
   const timeAgo = getTimeAgo(m.topArticle.timestamp);
   const totalInHub = m.articleCount || 1;
-  const posCount = m.positiveCount || (m.sentiment === "positive" ? 1 : 0);
-  const neuCount = m.neutralCount || (m.sentiment === "neutral" ? 1 : 0);
-  const negCount = m.negativeCount || (m.sentiment === "negative" ? 1 : 0);
-  const posPct = Math.round((posCount / totalInHub) * 100);
-  const neuPct = Math.round((neuCount / totalInHub) * 100);
-  const negPct = Math.round((negCount / totalInHub) * 100);
 
-  return `<div style="
-    background: linear-gradient(135deg, rgba(8, 14, 28, 0.96), rgba(13, 23, 42, 0.94));
-    padding: 14px 18px;
-    border-radius: 16px;
-    border: 1px solid ${sentBorder};
-    box-shadow: 0 12px 36px rgba(0,0,0,0.7), 0 0 24px ${sentColor}33;
-    font-family: Inter, system-ui, -apple-system, sans-serif;
-    color: #f1f5f9;
-    max-width: 320px;
-    min-width: 250px;
-    backdrop-filter: blur(16px);
-    pointer-events: none;
-  ">
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-      <span style="
-        width:9px; height:9px; border-radius:50%;
-        background:${sentColor};
-        box-shadow: 0 0 10px ${sentColor};
-        display:inline-block;
-      "></span>
-      <span style="font-family:Orbitron,sans-serif; font-weight:700; font-size:13px; color:#ffffff; letter-spacing:0.5px;">
-        ${m.city || m.state || m.country}
-      </span>
-      ${m.country && m.city !== m.country ? `<span style="color:#94a3b8; font-size:11px;">· ${m.country}</span>` : ""}
-      <span style="
-        margin-left:auto; background:${sentBg}; color:${sentColor};
-        padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700;
-        border:1px solid ${sentBorder}; text-transform:uppercase; letter-spacing:0.5px;
-      ">
-        ${m.sentiment}
-      </span>
+  return `
+    <div style="
+      background: rgba(10, 15, 29, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 0 20px ${sentBg};
+      backdrop-filter: blur(16px);
+      max-width: 320px;
+      pointer-events: none;
+      line-height: 1.4;
+    ">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-weight: 700; font-size: 13px; color: #ffffff;">📍 ${m.city}</span>
+          <span style="color: #94a3b8; font-size: 11px;">(${m.country})</span>
+        </div>
+        <span style="
+          background: ${sentBg};
+          border: 1px solid ${sentBorder};
+          color: ${sentColor};
+          font-size: 9px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          padding: 2px 7px;
+          border-radius: 9999px;
+        ">
+          ${m.sentiment}
+        </span>
+      </div>
+
+      <div style="font-size: 12px; font-weight: 600; color: #f1f5f9; margin-bottom: 6px;">
+        ${escapeHtml(m.topArticle.headline)}
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: #94a3b8; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <span>🏷️ ${categoryBadge} • ${timeAgo}</span>
+        <span style="color: ${sentColor}; font-weight: 600;">📡 ${totalInHub} stories</span>
+      </div>
     </div>
-
-    ${
-      totalInHub > 1
-        ? `<div style="margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; margin-bottom:3px;">
-              <span>Sentiment Pulse</span>
-              <span style="color:${sentColor}; font-weight:600;">${totalInHub} active stories</span>
-            </div>
-            <div style="display:flex; height:4px; border-radius:4px; overflow:hidden; background:rgba(255,255,255,0.08);">
-              <div style="width:${posPct}%; background:#10b981;" title="${posPct}% Positive"></div>
-              <div style="width:${neuPct}%; background:#f59e0b;" title="${neuPct}% Neutral"></div>
-              <div style="width:${negPct}%; background:#f43f5e;" title="${negPct}% Critical"></div>
-            </div>
-          </div>`
-        : ""
-    }
-
-    <div style="font-size:12.5px; font-weight:600; line-height:1.4; margin-bottom:6px; color:#f8fafc;">
-      ${m.topArticle.headline.length > 95 ? m.topArticle.headline.slice(0, 95) + "..." : m.topArticle.headline}
-    </div>
-
-    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:8px; font-size:10px; color:#94a3b8;">
-      <span style="background:rgba(255,255,255,0.06); color:#cbd5e1; padding:2px 7px; border-radius:8px; font-weight:500;">
-        ${categoryBadge}
-      </span>
-      <span style="color:#64748b;">·</span>
-      <span style="color:#cbd5e1;">${m.topArticle.source}</span>
-      <span style="color:#64748b;">·</span>
-      <span>${timeAgo}</span>
-      <span style="margin-left:auto; color:#10b981; font-weight:600;">
-        ${m.topArticle.credibilityScore}% credible
-      </span>
-    </div>
-
-    <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); text-align:center;">
-      <span style="color:#38bdf8; font-size:10px; font-weight:600; letter-spacing:0.8px;">
-        CLICK TO EXPLORE HUB
-      </span>
-    </div>
-  </div>`;
+  `;
 }
 
 function renderArcTooltip(arc: NewsArc): string {
-  return `<div style="
-    background: linear-gradient(135deg, rgba(8, 14, 28, 0.96), rgba(13, 23, 42, 0.94));
-    padding: 12px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(56, 189, 248, 0.5);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.7), 0 0 20px rgba(56, 189, 248, 0.2);
-    font-family: Inter, system-ui, sans-serif;
-    color: #f1f5f9;
-    max-width: 290px;
-    pointer-events: none;
-  ">
-    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.8px; color:#38bdf8; font-weight:700; margin-bottom:4px;">
-      ⚡ Live News Transmission Arc
+  const sentColor = SENTIMENT_COLORS[arc.sentiment];
+  return `
+    <div style="
+      background: rgba(10, 15, 29, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(14px);
+      max-width: 280px;
+      pointer-events: none;
+    ">
+      <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #38bdf8; margin-bottom: 4px; letter-spacing: 0.05em;">
+        ⚡ Information Transmission Arc
+      </div>
+      <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">
+        ${arc.sourceCity} ➔ ${arc.destinationCity}
+      </div>
+      <div style="font-size: 11px; color: #cbd5e1; font-style: italic;">
+        "${escapeHtml(arc.headline)}"
+      </div>
+      <div style="font-size: 9px; color: ${sentColor}; margin-top: 4px; font-weight: 600;">
+        Syndication: ${arc.source}
+      </div>
     </div>
-    <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:4px;">
-      ${arc.fromName} ⇄ ${arc.toName}
-    </div>
-    <div style="font-size:11px; color:#94a3b8; margin-bottom:6px;">
-      ${arc.articleCount} cross-regional stories syndicated
-    </div>
-    <div style="font-size:11.5px; color:#cbd5e1; line-height:1.3; font-style:italic;">
-      "${arc.topHeadline.slice(0, 80)}..."
-    </div>
-    <div style="margin-top:6px; font-size:9.5px; color:#38bdf8; text-align:right;">
-      Click to open destination hub →
-    </div>
-  </div>`;
+  `;
 }
 
 function renderHexTooltip(d: any): string {
-  const points = d.points || [];
-  const count = points.length;
-  const topArticle = points[0]?.article;
-  const posCount = points.filter((p: any) => p.sentiment === "positive").length;
-  const negCount = points.filter((p: any) => p.sentiment === "negative").length;
-  const neuCount = count - posCount - negCount;
+  const count = d.points?.length || 1;
+  const sampleArticle = d.points?.[0]?.article;
+  const topHeadline = sampleArticle?.headline || "Global News Concentration";
+  const country = sampleArticle?.location?.country || "International Region";
 
-  return `<div style="
-    background: linear-gradient(135deg, rgba(8, 14, 28, 0.96), rgba(13, 23, 42, 0.94));
-    padding: 12px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(20, 184, 166, 0.5);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-    font-family: Inter, system-ui, sans-serif;
-    color: #f1f5f9;
-    max-width: 280px;
-    pointer-events: none;
-  ">
-    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.8px; color:#2dd4bf; font-weight:700; margin-bottom:4px;">
-      ⬡ Regional Hexagonal Cluster
+  return `
+    <div style="
+      background: rgba(10, 15, 29, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(14px);
+      max-width: 280px;
+      pointer-events: none;
+    ">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+        <span style="font-size: 11px; font-weight: 700; color: #38bdf8;">🔷 Hex Density Column</span>
+        <span style="font-size: 10px; font-weight: 700; color: #10b981;">${count} Articles</span>
+      </div>
+      <div style="font-size: 11px; color: #e2e8f0; font-weight: 600; margin-bottom: 2px;">
+        ${country}
+      </div>
+      <div style="font-size: 10px; color: #94a3b8; font-style: italic;">
+        "${escapeHtml(topHeadline.slice(0, 75))}..."
+      </div>
     </div>
-    <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:4px;">
-      ${count} Stories in Density Tower
-    </div>
-    <div style="display:flex; height:4px; border-radius:4px; overflow:hidden; background:rgba(255,255,255,0.08); margin-bottom:6px;">
-      <div style="width:${Math.round((posCount / count) * 100)}%; background:#10b981;"></div>
-      <div style="width:${Math.round((neuCount / count) * 100)}%; background:#f59e0b;"></div>
-      <div style="width:${Math.round((negCount / count) * 100)}%; background:#f43f5e;"></div>
-    </div>
-    ${
-      topArticle
-        ? `<div style="font-size:11px; color:#cbd5e1; line-height:1.3;">
-            ${topArticle.headline.slice(0, 80)}...
-          </div>`
-        : ""
-    }
-  </div>`;
+  `;
 }
 
-function renderPolygonTooltip(d: any, statsMap: Map<string, any>): string {
-  const name = d.properties.NAME || d.properties.ADMIN || "Country";
-  const code = (d.properties.ISO_A2 || d.properties.POSTAL || "").toLowerCase();
-  const countryMatch = COUNTRIES_DATA.find((c) => c.code === code) || COUNTRIES_DATA.find((c) => c.name.toLowerCase() === name.toLowerCase());
-  const flag = countryMatch?.flag || "🌍";
+function renderPolygonTooltip(
+  polygon: any,
+  statsMap: Map<string, any>
+): string {
+  if (!polygon?.properties) return "";
+  const name = polygon.properties.NAME || polygon.properties.ADMIN || "Territory";
+  const code = (polygon.properties.ISO_A2 || polygon.properties.POSTAL || "").toUpperCase();
 
-  const stats = getCountryStats(d, statsMap);
+  const stats = getCountryStats(polygon, statsMap);
   const total = stats?.total || 0;
+  const dominant = stats?.dominant || "neutral";
+  const topHeadline = stats?.topHeadline || "Monitoring verified news channels";
 
-  return `<div style="
-    background: linear-gradient(135deg, rgba(8, 14, 28, 0.96), rgba(13, 23, 42, 0.94));
-    padding: 12px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(6, 182, 212, 0.5);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-    font-family: Inter, system-ui, sans-serif;
-    color: #f1f5f9;
-    min-width: 200px;
-    pointer-events: none;
-  ">
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-      <span style="font-size:18px;">${flag}</span>
-      <span style="font-size:13px; font-weight:700; color:#ffffff;">${name}</span>
+  const color =
+    total > 0
+      ? SENTIMENT_COLORS[dominant as "positive" | "neutral" | "negative"]
+      : "#94a3b8";
+
+  // Flag lookup
+  const countryMatch = COUNTRIES_DATA.find((c) => c.code === code.toLowerCase() || c.name.toLowerCase() === name.toLowerCase());
+  const flag = countryMatch ? countryMatch.flag : "🌐";
+
+  return `
+    <div style="
+      background: rgba(10, 15, 29, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(16px);
+      max-width: 300px;
+      pointer-events: none;
+    ">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 16px;">${flag}</span>
+          <span style="font-size: 13px; font-weight: 700; color: #ffffff;">${name}</span>
+          <span style="font-size: 10px; color: #94a3b8;">(${code})</span>
+        </div>
+        <span style="
+          background: rgba(255,255,255,0.08);
+          color: ${color};
+          font-size: 9px;
+          font-weight: 700;
+          text-transform: uppercase;
+          padding: 2px 7px;
+          border-radius: 9999px;
+        ">
+          ${total > 0 ? dominant : "Monitored"}
+        </span>
+      </div>
+
+      <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 6px; line-height: 1.35;">
+        ${escapeHtml(topHeadline.slice(0, 90))}${topHeadline.length > 90 ? "..." : ""}
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
+        <span>Coverage: <b style="color: #ffffff;">${total}</b> Dispatches</span>
+        <span style="color: #38bdf8; font-weight: 600;">Click to focus</span>
+      </div>
     </div>
-    <div style="font-size:11px; color:${total > 0 ? "#10b981" : "#94a3b8"}; margin-bottom:4px;">
-      ${total > 0 ? `${total} Active Global Dispatches` : "No active dispatches"}
-    </div>
-    ${
-      total > 0
-        ? `<div style="font-size:10px; color:#94a3b8;">
-            Sentiment: <span style="font-weight:600; text-transform:uppercase; color:${
-              stats.dominant === "positive" ? "#10b981" : stats.dominant === "negative" ? "#f43f5e" : "#f59e0b"
-            }">${stats.dominant}</span>
-          </div>`
-        : ""
-    }
-    <div style="margin-top:6px; font-size:9.5px; color:#06b6d4; font-weight:600;">
-      Click to open Country Intelligence →
-    </div>
-  </div>`;
+  `;
 }
+
+// ── Helpers ──
 
 function getCountryStats(polygon: any, statsMap: Map<string, any>) {
   if (!polygon?.properties) return null;
@@ -782,27 +916,37 @@ function getCountryStats(polygon: any, statsMap: Map<string, any>) {
   return statsMap.get(name) || statsMap.get(code) || null;
 }
 
-function getHexDominantColor(points: any[], alpha = 1.0): string {
-  if (!points || points.length === 0) return `rgba(245, 158, 11, ${alpha})`;
-  let pos = 0,
-    neu = 0,
-    neg = 0;
+function getHexDominantColor(points: any[], opacity = 0.85): string {
+  if (!points || points.length === 0) return `rgba(245, 158, 11, ${opacity})`;
+  let pos = 0;
+  let neg = 0;
+  let neu = 0;
+
   points.forEach((p) => {
     if (p.sentiment === "positive") pos++;
     else if (p.sentiment === "negative") neg++;
     else neu++;
   });
-  if (pos >= neu && pos >= neg) return `rgba(16, 185, 129, ${alpha})`;
-  if (neg >= neu) return `rgba(244, 63, 94, ${alpha})`;
-  return `rgba(245, 158, 11, ${alpha})`;
+
+  if (pos >= neu && pos >= neg) return `rgba(16, 185, 129, ${opacity})`;
+  if (neg >= neu) return `rgba(244, 63, 94, ${opacity})`;
+  return `rgba(245, 158, 11, ${opacity})`;
 }
 
-function getTimeAgo(timestamp: string): string {
-  const diff = Date.now() - new Date(timestamp).getTime();
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
