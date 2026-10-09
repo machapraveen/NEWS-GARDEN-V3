@@ -110,11 +110,13 @@ function GeoLevel({ level, name, articles }: { level: string; name: string; arti
 export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps) {
   if (!marker) return null;
 
-  // Find articles near this marker
-  const markerArticles = articles.filter(a =>
-    Math.abs(a.location.lat - marker.lat) < 1 && Math.abs(a.location.lng - marker.lng) < 1
-  );
-  const primaryArticle = markerArticles[0];
+  // Find articles in this hub / cluster
+  const markerArticles = (marker.articles && marker.articles.length > 0)
+    ? marker.articles
+    : articles.filter(a =>
+        Math.abs(a.location.lat - marker.lat) < 1.5 && Math.abs(a.location.lng - marker.lng) < 1.5
+      );
+  const primaryArticle = marker.topArticle || markerArticles[0];
   if (!primaryArticle) return null;
 
   // Build geographic levels — skip levels with empty names

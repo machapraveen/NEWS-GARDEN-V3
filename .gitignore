@@ -31,6 +31,8 @@ dist-ssr
 # Playwright
 test-results/
 playwright-report/
+.playwright-mcp/
+response.txt
 
 # TypeScript
 *.tsbuildinfo

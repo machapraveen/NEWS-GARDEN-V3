@@ -282,25 +282,43 @@ async function getStateNewsAsRaw(supabase: any): Promise<RawArticle[]> {
   }
 }
 
-// ─── Multi-region fetch: 8+ parallel calls for global coverage ───
+// ─── Multi-region fetch: 20+ parallel calls across all continents (Middle East, Americas, Europe, Asia, Africa) ───
 async function fetchMultiRegion(apiKey: string, supabase: any): Promise<{ articles: RawArticle[]; source: string }> {
   const fetches = [
-    fetchGNews(apiKey, undefined, 100),              // Global top headlines
-    fetchGNews(apiKey, undefined, 100, 'in'),         // India
-    fetchGNews(apiKey, undefined, 50, 'us'),          // United States
-    fetchGNews(apiKey, undefined, 30, 'gb'),          // United Kingdom
-    fetchGNews(apiKey, undefined, 20, 'au'),          // Australia
-    fetchGNews(apiKey, undefined, 20, 'jp'),          // Japan
-    fetchGNews(apiKey, undefined, 20, 'br'),          // Brazil
-    fetchGNews(apiKey, undefined, 20, 'ng'),          // Nigeria
-    fetchGDELT('world news', 30),                     // GDELT cross-source
-    getStateNewsAsRaw(supabase),                      // Indian state news
+    fetchGNews(apiKey, undefined, 80),               // Global top headlines
+    fetchGNews(apiKey, undefined, 60, 'in'),         // India
+    fetchGNews(apiKey, undefined, 40, 'us'),         // United States
+    fetchGNews(apiKey, undefined, 25, 'gb'),         // United Kingdom
+    fetchGNews(apiKey, undefined, 20, 'ae'),         // UAE (Middle East)
+    fetchGNews(apiKey, undefined, 20, 'sa'),         // Saudi Arabia (Middle East)
+    fetchGNews(apiKey, undefined, 20, 'eg'),         // Egypt (MENA)
+    fetchGNews(apiKey, undefined, 15, 'il'),         // Israel (Middle East)
+    fetchGNews(apiKey, undefined, 15, 'tr'),         // Turkey
+    fetchGNews(apiKey, undefined, 20, 'de'),         // Germany
+    fetchGNews(apiKey, undefined, 20, 'fr'),         // France
+    fetchGNews(apiKey, undefined, 15, 'it'),         // Italy
+    fetchGNews(apiKey, undefined, 15, 'es'),         // Spain
+    fetchGNews(apiKey, undefined, 15, 'ua'),         // Ukraine
+    fetchGNews(apiKey, undefined, 20, 'ca'),         // Canada
+    fetchGNews(apiKey, undefined, 20, 'br'),         // Brazil
+    fetchGNews(apiKey, undefined, 15, 'mx'),         // Mexico
+    fetchGNews(apiKey, undefined, 20, 'jp'),         // Japan
+    fetchGNews(apiKey, undefined, 20, 'au'),         // Australia
+    fetchGNews(apiKey, undefined, 15, 'sg'),         // Singapore
+    fetchGNews(apiKey, undefined, 20, 'ng'),         // Nigeria (Africa)
+    fetchGNews(apiKey, undefined, 20, 'za'),         // South Africa
+    fetchGDELT('world news', 25),                    // GDELT cross-source
+    getStateNewsAsRaw(supabase),                     // Indian state news
   ];
 
   const results = await Promise.allSettled(fetches);
   const allArticles: RawArticle[] = [];
   const sources: string[] = [];
-  const regionNames = ['Global', 'India', 'US', 'UK', 'AU', 'JP', 'BR', 'NG', 'GDELT', 'StateNews'];
+  const regionNames = [
+    'Global', 'India', 'US', 'UK', 'UAE', 'Saudi', 'Egypt', 'Israel', 'Turkey',
+    'Germany', 'France', 'Italy', 'Spain', 'Ukraine', 'Canada', 'Brazil', 'Mexico',
+    'Japan', 'Australia', 'Singapore', 'Nigeria', 'SouthAfrica', 'GDELT', 'StateNews'
+  ];
 
   results.forEach((result, i) => {
     if (result.status === 'fulfilled' && result.value.length > 0) {
@@ -735,6 +753,42 @@ const COUNTRY_CODE_MAP: Record<string, { country: string; continent: string; lat
   'ca': { country: 'Canada', continent: 'North America', lat: 56.1304, lng: -106.3468 },
   'de': { country: 'Germany', continent: 'Europe', lat: 51.1657, lng: 10.4515 },
   'fr': { country: 'France', continent: 'Europe', lat: 46.2276, lng: 2.2137 },
+  'ae': { country: 'United Arab Emirates', continent: 'Middle East', lat: 24.4539, lng: 54.3773 },
+  'sa': { country: 'Saudi Arabia', continent: 'Middle East', lat: 24.7136, lng: 46.6753 },
+  'eg': { country: 'Egypt', continent: 'Middle East', lat: 30.0444, lng: 31.2357 },
+  'il': { country: 'Israel', continent: 'Middle East', lat: 31.7683, lng: 35.2137 },
+  'tr': { country: 'Turkey', continent: 'Middle East', lat: 39.9334, lng: 32.8597 },
+  'qa': { country: 'Qatar', continent: 'Middle East', lat: 25.2854, lng: 51.5310 },
+  'kw': { country: 'Kuwait', continent: 'Middle East', lat: 29.3759, lng: 47.9774 },
+  'om': { country: 'Oman', continent: 'Middle East', lat: 23.5880, lng: 58.3829 },
+  'bh': { country: 'Bahrain', continent: 'Middle East', lat: 26.2285, lng: 50.5860 },
+  'jo': { country: 'Jordan', continent: 'Middle East', lat: 31.9454, lng: 35.9284 },
+  'lb': { country: 'Lebanon', continent: 'Middle East', lat: 33.8938, lng: 35.5018 },
+  'iq': { country: 'Iraq', continent: 'Middle East', lat: 33.3152, lng: 44.3661 },
+  'ir': { country: 'Iran', continent: 'Middle East', lat: 35.6892, lng: 51.3890 },
+  'sg': { country: 'Singapore', continent: 'Asia', lat: 1.3521, lng: 103.8198 },
+  'kr': { country: 'South Korea', continent: 'Asia', lat: 37.5665, lng: 126.9780 },
+  'cn': { country: 'China', continent: 'Asia', lat: 39.9042, lng: 116.4074 },
+  'za': { country: 'South Africa', continent: 'Africa', lat: -25.7479, lng: 28.2293 },
+  'ke': { country: 'Kenya', continent: 'Africa', lat: -1.2921, lng: 36.8219 },
+  'mx': { country: 'Mexico', continent: 'North America', lat: 19.4326, lng: -99.1332 },
+  'ar': { country: 'Argentina', continent: 'South America', lat: -34.6037, lng: -58.3816 },
+  'it': { country: 'Italy', continent: 'Europe', lat: 41.9028, lng: 12.4964 },
+  'es': { country: 'Spain', continent: 'Europe', lat: 40.4168, lng: -3.7038 },
+  'nl': { country: 'Netherlands', continent: 'Europe', lat: 52.3676, lng: 4.9041 },
+  'ch': { country: 'Switzerland', continent: 'Europe', lat: 46.9480, lng: 7.4474 },
+  'se': { country: 'Sweden', continent: 'Europe', lat: 59.3293, lng: 18.0686 },
+  'no': { country: 'Norway', continent: 'Europe', lat: 59.9139, lng: 10.7522 },
+  'ua': { country: 'Ukraine', continent: 'Europe', lat: 50.4501, lng: 30.5234 },
+  'ru': { country: 'Russia', continent: 'Europe', lat: 55.7558, lng: 37.6173 },
+  'nz': { country: 'New Zealand', continent: 'Oceania', lat: -41.2865, lng: 174.7762 },
+  'id': { country: 'Indonesia', continent: 'Asia', lat: -6.2088, lng: 106.8456 },
+  'my': { country: 'Malaysia', continent: 'Asia', lat: 3.1390, lng: 101.6869 },
+  'th': { country: 'Thailand', continent: 'Asia', lat: 13.7563, lng: 100.5018 },
+  'ph': { country: 'Philippines', continent: 'Asia', lat: 14.5995, lng: 120.9842 },
+  'vn': { country: 'Vietnam', continent: 'Asia', lat: 21.0278, lng: 105.8342 },
+  'pk': { country: 'Pakistan', continent: 'Asia', lat: 33.6844, lng: 73.0479 },
+  'bd': { country: 'Bangladesh', continent: 'Asia', lat: 23.8103, lng: 90.4125 },
 };
 
 // Broader keyword → state mapping for India (city aliases, abbreviations, nicknames)
@@ -852,7 +906,7 @@ function inferCategory(title: string): string {
 function inferLocation(article: RawArticle): { city: string; district: string; state: string; country: string; continent: string; lat: number; lng: number } {
   const text = `${article.title} ${article.description} ${article.source.name}`.toLowerCase();
   const sourceLower = (article.source?.name || '').toLowerCase();
-  const jitter = (v: number, range = 0.3) => v + (Math.random() - 0.5) * range;
+  const jitter = (v: number, range = 0.08) => v + (Math.random() - 0.5) * range;
 
   // Helper: title-case a city name
   const titleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -1039,8 +1093,95 @@ serve(async (req) => {
   }
 
   try {
-    const { query, max, forceRefresh } = await req.json();
+    const { query, max, forceRefresh, country, countryCode } = await req.json();
     const supabase = getSupabaseAdmin();
+
+    // 0. On-Demand JIT Country Fetching (for any of the 195 countries)
+    if (country || countryCode) {
+      const targetCountry = (country || countryCode || '').trim();
+      const codeClean = (countryCode || '').toLowerCase().trim();
+
+      // Check DB cache first
+      if (!forceRefresh) {
+        const { data: dbCountryArticles } = await supabase
+          .from('news_articles')
+          .select('*')
+          .or(`country.ilike.%${targetCountry}%,state.ilike.%${targetCountry}%`)
+          .order('fetched_at', { ascending: false })
+          .limit(30);
+
+        if (dbCountryArticles && dbCountryArticles.length >= 3) {
+          console.log(`Serving ${dbCountryArticles.length} articles for ${targetCountry} from DB cache`);
+          const mapped = dbCountryArticles.map((a: any) => ({
+            id: a.id,
+            headline: a.title,
+            summary: a.summary || '',
+            fullText: a.summary || '',
+            source: a.source_name || 'Unknown',
+            sourceUrl: a.url || '',
+            imageUrl: a.image_url || '',
+            timestamp: a.published_at || new Date().toISOString(),
+            category: normalizeCategory(a.category || 'Technology'),
+            sentiment: a.sentiment_label || 'neutral',
+            sentimentScore: a.sentiment_score ?? 0.5,
+            credibilityScore: a.credibility_score ?? 70,
+            bertConfidence: a.ai_fake_score ?? 0.5,
+            location: {
+              city: a.city || '',
+              district: a.district || '',
+              state: a.state || '',
+              country: a.country || targetCountry,
+              continent: a.continent || 'Unknown',
+              lat: a.latitude || 0,
+              lng: a.longitude || 0,
+            },
+            entities: a.entities || [],
+            aiSummary: a.ai_summary || a.summary || '',
+          }));
+
+          return new Response(JSON.stringify({
+            totalArticles: mapped.length,
+            articles: mapped,
+            source: 'database-country',
+            cached: true,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      // If not in DB or force refresh: fetch from GNews Enterprise API
+      const GNEWS_API_KEY = Deno.env.get('GNEWS_API_KEY');
+      let countryRaw: RawArticle[] = [];
+      if (GNEWS_API_KEY) {
+        if (codeClean && COUNTRY_CODE_MAP[codeClean]) {
+          countryRaw = await fetchGNews(GNEWS_API_KEY, undefined, 25, codeClean);
+        }
+        if (countryRaw.length === 0) {
+          countryRaw = await fetchGNews(GNEWS_API_KEY, `${targetCountry} news`, 25);
+        }
+      }
+
+      if (countryRaw.length > 0) {
+        countryRaw = countryRaw.map(a => ({
+          ...a,
+          _hint: { country: codeClean || targetCountry },
+        }));
+
+        const analyses = countryRaw.map(a => analyzeArticleLocal(a));
+        const analyzed = buildAnalyzedArticles(countryRaw, analyses);
+        try {
+          await storeArticles(supabase, analyzed, `GNews-${targetCountry}`);
+        } catch (e) {
+          console.error('Store country articles error:', e);
+        }
+
+        return new Response(JSON.stringify({
+          totalArticles: analyzed.length,
+          articles: analyzed,
+          source: `GNews-${targetCountry}`,
+          cached: false,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
 
     // 1. Check database cache (unless force refresh or search query)
     if (!forceRefresh && !query) {
@@ -1094,7 +1235,7 @@ serve(async (req) => {
     // 4. Build articles with analysis data
     const analyzedArticles = buildAnalyzedArticles(rawArticles, analyses);
 
-    // 5. Clean old articles, then store new ones
+    // 5. Clean old articles, then store new ones (Rolling 48-hour purge keeps Free Tier safe)
     if (!query) {
       await cleanOldArticles(supabase);
       try {

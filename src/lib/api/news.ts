@@ -26,13 +26,17 @@ async function callEdgeFunction(functionName: string, body: any): Promise<any> {
 export async function fetchAndAnalyzeNews(
   query?: string | null,
   max: number = 25,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
+  country?: string | null,
+  countryCode?: string | null
 ): Promise<NewsArticle[]> {
   try {
     const data = await callEdgeFunction('fetch-news', {
       query: query || null,
       max,
       forceRefresh,
+      country: country || null,
+      countryCode: countryCode || null,
     });
 
     const articles = data?.articles || [];
@@ -72,6 +76,15 @@ export async function fetchAndAnalyzeNews(
   }
 }
 
+// Fetch on-demand news for a specific country (JIT ingestion)
+export async function fetchCountryNews(
+  countryCode: string,
+  countryName?: string,
+  forceRefresh = false
+): Promise<NewsArticle[]> {
+  return fetchAndAnalyzeNews(null, 30, forceRefresh, countryName || null, countryCode || null);
+}
+
 // Filter articles by category on the client side (no API call)
 export function filterArticlesByCategory(
   articles: NewsArticle[],
@@ -79,6 +92,42 @@ export function filterArticlesByCategory(
 ): NewsArticle[] {
   if (!category) return articles;
   return articles.filter(a => a.category === category);
+}
+
+// Filter articles by geopolitical region
+export function filterArticlesByRegion(
+  articles: NewsArticle[],
+  region: string
+): NewsArticle[] {
+  if (!region || region === 'All') return articles;
+
+  const MENA = ['united arab emirates', 'saudi arabia', 'egypt', 'qatar', 'israel', 'turkey', 'kuwait', 'oman', 'bahrain', 'jordan', 'lebanon', 'iraq', 'iran', 'yemen', 'syria', 'morocco', 'algeria', 'tunisia'];
+  const AMERICAS = ['united states', 'canada', 'brazil', 'mexico', 'argentina', 'colombia', 'chile', 'peru', 'venezuela', 'ecuador', 'cuba', 'panama', 'costa rica', 'uruguay', 'bolivia'];
+  const EUROPE = ['united kingdom', 'germany', 'france', 'italy', 'spain', 'netherlands', 'switzerland', 'sweden', 'norway', 'poland', 'ukraine', 'belgium', 'austria', 'ireland', 'portugal', 'greece', 'denmark', 'finland', 'russia'];
+  const ASIA = ['india', 'japan', 'china', 'australia', 'south korea', 'singapore', 'indonesia', 'malaysia', 'thailand', 'philippines', 'vietnam', 'pakistan', 'bangladesh', 'new zealand', 'taiwan', 'sri lanka'];
+  const AFRICA = ['nigeria', 'south africa', 'kenya', 'ghana', 'ethiopia', 'rwanda', 'tanzania', 'uganda', 'senegal', 'ivory coast', 'cameroon', 'angola', 'zimbabwe'];
+
+  return articles.filter(a => {
+    const c = (a.location?.country || '').toLowerCase();
+    const cont = (a.location?.continent || '').toLowerCase();
+
+    if (region === 'Middle East') {
+      return MENA.some(m => c.includes(m)) || cont === 'middle east';
+    }
+    if (region === 'Americas') {
+      return AMERICAS.some(m => c.includes(m)) || cont.includes('america');
+    }
+    if (region === 'Europe') {
+      return EUROPE.some(m => c.includes(m)) || cont === 'europe';
+    }
+    if (region === 'Asia-Pacific') {
+      return ASIA.some(m => c.includes(m)) || cont === 'asia' || cont === 'oceania';
+    }
+    if (region === 'Africa') {
+      return AFRICA.some(m => c.includes(m)) || cont === 'africa';
+    }
+    return true;
+  });
 }
 
 // Analyze a single article for credibility (used in ArticleDetail)

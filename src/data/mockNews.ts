@@ -574,32 +574,95 @@ export interface GlobeMarker {
   sentimentScore: number;
   articleCount: number;
   topArticle: NewsArticle;
+  articles?: NewsArticle[];
+  positiveCount?: number;
+  neutralCount?: number;
+  negativeCount?: number;
 }
 
 export function getGlobeMarkers(articles: NewsArticle[] = mockArticles): GlobeMarker[] {
-  const locationMap = new Map<string, NewsArticle[]>();
+  const groups: {
+    city: string;
+    state: string;
+    country: string;
+    continent: string;
+    lat: number;
+    lng: number;
+    articles: NewsArticle[];
+  }[] = [];
+
   articles.forEach(article => {
-    const key = `${article.location.lat},${article.location.lng}`;
-    if (!locationMap.has(key)) locationMap.set(key, []);
-    locationMap.get(key)!.push(article);
+    const lat = article.location.lat;
+    const lng = article.location.lng;
+    const city = (article.location.city || '').trim();
+    const state = (article.location.state || '').trim();
+    const country = (article.location.country || '').trim();
+
+    // Group articles within the same city or within ~1.0 degree (~110km)
+    const existing = groups.find(g => {
+      if (city && g.city && city.toLowerCase() === g.city.toLowerCase() && country.toLowerCase() === g.country.toLowerCase()) {
+        return true;
+      }
+      const dLat = Math.abs(g.lat - lat);
+      const dLng = Math.abs(g.lng - lng);
+      return dLat < 1.0 && dLng < 1.0;
+    });
+
+    if (existing) {
+      existing.articles.push(article);
+      const n = existing.articles.length;
+      existing.lat = existing.lat + (lat - existing.lat) / n;
+      existing.lng = existing.lng + (lng - existing.lng) / n;
+      if (!existing.city && city) existing.city = city;
+      if (!existing.state && state) existing.state = state;
+    } else {
+      groups.push({
+        city: city || state || country || 'Unknown',
+        state,
+        country: country || 'Unknown',
+        continent: article.location.continent || 'Unknown',
+        lat,
+        lng,
+        articles: [article],
+      });
+    }
   });
 
-  return Array.from(locationMap.entries()).map(([, arts]) => {
-    const top = arts.sort((a, b) => b.sentimentScore - a.sentimentScore)[0];
-    const avgSentiment = arts.reduce((s, a) => s + a.sentimentScore, 0) / arts.length;
-    const sentiment: Sentiment = avgSentiment > 0.6 ? "positive" : avgSentiment < 0.4 ? "negative" : "neutral";
+  return groups.map(g => {
+    const sorted = [...g.articles].sort((a, b) => {
+      const credDiff = (b.credibilityScore || 50) - (a.credibilityScore || 50);
+      if (Math.abs(credDiff) > 15) return credDiff;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+    const top = sorted[0];
+
+    const avgSentiment = g.articles.reduce((s, a) => s + (a.sentimentScore ?? 0.5), 0) / g.articles.length;
+    let pos = 0, neu = 0, neg = 0;
+    g.articles.forEach(a => {
+      if (a.sentiment === 'positive') pos++;
+      else if (a.sentiment === 'negative') neg++;
+      else neu++;
+    });
+
+    const sentiment: Sentiment =
+      avgSentiment >= 0.58 ? "positive" : avgSentiment <= 0.42 ? "negative" : "neutral";
+
     return {
       id: top.id,
-      lat: top.location.lat,
-      lng: top.location.lng,
-      city: top.location.city,
-      state: top.location.state || '',
-      country: top.location.country,
-      continent: top.location.continent,
+      lat: g.lat,
+      lng: g.lng,
+      city: g.city,
+      state: g.state,
+      country: g.country,
+      continent: g.continent,
       sentiment,
       sentimentScore: avgSentiment,
-      articleCount: arts.length,
+      articleCount: g.articles.length,
       topArticle: top,
+      articles: g.articles,
+      positiveCount: pos,
+      neutralCount: neu,
+      negativeCount: neg,
     };
   });
 }
