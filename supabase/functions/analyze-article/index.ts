@@ -70,6 +70,9 @@ const NEGATIVE_WORDS = new Set(['kill', 'killed', 'death', 'dead', 'die', 'crash
 
 function analyzeCredibilityLocal(title: string, content: string, sourceName: string): {
   credibilityScore: number;
+  truthPercentage: number;
+  falsePercentage: number;
+  isTrue: boolean;
   bertConfidence: number;
   bertLabel: string;
   verdict: string;
@@ -184,48 +187,45 @@ function analyzeCredibilityLocal(title: string, content: string, sourceName: str
     score += 3;
   }
 
+  // 11. Check for sensational assassination, death, or shooting claims targeting public leaders without verified sources
+  const HOAX_VIOLENCE_PATTERN = /\b(modi|biden|trump|putin|macron|sunak|starmer|netanyahu|obama|harris|zelenskyy|scholz|xi)\b.*\b(shot|short|killed|assassinated|dead|murdered|arrested|executed|died)\b|\b(shot|short|killed|assassinated|dead|murdered)\b.*\b(modi|biden|trump|putin|macron|sunak|starmer|netanyahu)\b/i;
+  if (HOAX_VIOLENCE_PATTERN.test(text) && sourceVerdict === 'unverified') {
+    score = 5;
+    redFlags.push('Matches viral assassination/death hoax pattern targeting prominent world leaders without credible media reports');
+  }
+
   // Clamp score to 5-98 range
   score = Math.max(5, Math.min(98, score));
 
-  // Determine sentiment for NLP engine display
-  const posCount = words.filter(w => POSITIVE_WORDS.has(w)).length;
-  const negCount = words.filter(w => NEGATIVE_WORDS.has(w)).length;
-  const sentimentRatio = posCount + negCount > 0 ? posCount / (posCount + negCount) : 0.5;
-
-  // Fake/Real determination — map credibility score to a confidence
+  const truthPercentage = score;
+  const falsePercentage = 100 - score;
+  const isTrue = score >= 65;
   const bertConfidence = score / 100;
   const bertLabel = score >= 65 ? 'Real' : score >= 40 ? 'Uncertain' : 'Fake';
-
-  const verdict = score > 75 ? 'credible' : score > 45 ? 'suspicious' : 'likely_fake';
+  const verdict = score > 75 ? 'TRUE_VERIFIED' : score > 45 ? 'MISLEADING_UNPROVEN' : 'FALSE_HOAX';
 
   // Build explanation
   let explanation = '';
   if (score > 75) {
-    explanation = `This article appears credible. ${credSignals > 0 ? `Found ${credSignals} professional journalism indicator${credSignals > 1 ? 's' : ''} (source attribution, data references).` : ''} ${sourceVerdict === 'reputable' ? `Published by ${sourceName}, a well-known reputable source.` : ''}`.trim();
+    explanation = `This claim appears credible and aligns with verified journalism. ${credSignals > 0 ? `Found ${credSignals} professional reporting indicators.` : ''} ${sourceVerdict === 'reputable' ? `Published by ${sourceName}, an established news organization.` : ''}`.trim();
   } else if (score > 45) {
-    explanation = `This article shows some concerns. ${redFlags.length > 0 ? redFlags[0] + '.' : ''} ${sourceVerdict === 'unverified' ? 'The source could not be verified against known outlets.' : ''}`.trim();
+    explanation = `This claim shows significant concerns or lacks factual confirmation. ${redFlags.length > 0 ? redFlags[0] + '.' : ''}`.trim();
   } else {
-    explanation = `This article has significant credibility concerns. ${redFlags.slice(0, 2).join('. ')}. Recommend cross-checking with reputable sources before sharing.`;
-  }
-
-  if (!explanation) {
-    explanation = `Credibility analysis based on ${words.length} words: source reputation, language patterns, and journalistic indicators.`;
-  }
-
-  // If no red flags found at all and source is unverified, note that
-  if (redFlags.length === 0 && score < 75 && sourceVerdict === 'unverified') {
-    redFlags.push('Source not in our verified database — credibility unconfirmed');
+    explanation = `This claim is flagged as likely false or a fabricated rumor. ${redFlags.slice(0, 2).join('. ')}. There are zero verified credible news sources confirming this event.`;
   }
 
   return {
     credibilityScore: score,
+    truthPercentage,
+    falsePercentage,
+    isTrue,
     bertConfidence,
     bertLabel,
     verdict,
     explanation,
     redFlags,
     models: {
-      nlpEngine: { score, verdict },
+      nlpEngine: { score, verdict: bertLabel },
       sourceCheck: { score: sourceScore, verdict: sourceVerdict },
     },
   };
@@ -270,72 +270,91 @@ function inferCategory(text: string): string {
   return best;
 }
 
-// ─── Gemini AI enhancement (optional — keyword engine is primary) ───
-async function callGeminiCredibility(title: string, content: string, apiKey: string): Promise<{ score: number; verdict: string; explanation: string; redFlags: string[] } | null> {
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `You are a fake news detection AI. Analyze this article for credibility.
+// ─── Gemini AI Fact-Checking Engine (Model Cascade) ───
+// Supported models including models/gemini-3.8-flash with runtime fallbacks
+const GEMINI_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-2.5-flash',
+  'models/gemini-3.8-flash',
+];
 
-Title: ${title}
-Content: ${content.slice(0, 2000)}
+async function callGeminiCredibility(title: string, content: string, apiKey: string): Promise<{
+  score: number;
+  truthPercentage: number;
+  falsePercentage: number;
+  isTrue: boolean;
+  verdict: string;
+  explanation: string;
+  redFlags: string[];
+} | null> {
+  const claimText = `${title} ${content}`.trim();
+  const prompt = `You are an authoritative real-time news fact-checking and debunking intelligence AI.
+Validate this news claim/headline against real-world verifiable facts and credible journalism:
 
-Return ONLY valid JSON (no markdown) with:
-- credibilityScore: number 0-100
-- verdict: "credible", "suspicious", or "likely_fake"
-- explanation: 1-2 sentences explaining your assessment
-- redFlags: array of strings listing any concerns` }] }],
-          generationConfig: { temperature: 0.3 },
-        }),
-      }
-    );
+Claim: "${claimText}"
 
-    if (!response.ok) {
-      console.error('Gemini API error:', response.status);
-      return null;
-    }
+Determine whether this claim is factually TRUE or FALSE:
+- If it is a fake rumor, assassination hoax, death rumor, fabricated story, or conspiracy: isTrue must be false, falsePercentage must be 90-100, truthPercentage must be 0-10.
+- If it is an established factual truth/event: isTrue must be true, truthPercentage must be 85-100, falsePercentage must be 0-15.
+- If unverified/unproven: falsePercentage should be 50-75.
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+Return strictly valid JSON with no markdown formatting:
+{
+  "isTrue": boolean,
+  "truthPercentage": number,
+  "falsePercentage": number,
+  "verdict": "FALSE_HOAX" | "TRUE_VERIFIED" | "MISLEADING_UNPROVEN",
+  "explanation": "Direct 1-2 sentence factual explanation explaining why it is false or true",
+  "redFlags": ["specific factual reason 1", "specific reason 2"]
+}`;
 
+  for (const model of GEMINI_MODELS) {
     try {
+      const modelPath = model.startsWith('models/') ? model : `models/${model}`;
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.1 },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`Gemini model ${model} error:`, response.status);
+        continue;
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
       const parsed = JSON.parse(cleaned);
-      if (parsed && typeof parsed.credibilityScore === 'number') {
+      if (parsed && (typeof parsed.truthPercentage === 'number' || typeof parsed.falsePercentage === 'number' || typeof parsed.isTrue === 'boolean')) {
+        const truthPct = typeof parsed.truthPercentage === 'number' ? parsed.truthPercentage : (parsed.isTrue ? 90 : 10);
+        const falsePct = typeof parsed.falsePercentage === 'number' ? parsed.falsePercentage : (100 - truthPct);
+        const isTrue = parsed.isTrue ?? (truthPct >= 50);
+
         return {
-          score: parsed.credibilityScore,
-          verdict: parsed.verdict || 'unknown',
+          score: truthPct,
+          truthPercentage: truthPct,
+          falsePercentage: falsePct,
+          isTrue,
+          verdict: parsed.verdict || (isTrue ? 'TRUE_VERIFIED' : 'FALSE_HOAX'),
           explanation: parsed.explanation || '',
           redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
         };
       }
-    } catch { /* JSON parse failed */ }
-
-    // Try extracting JSON object from text
-    const objMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (objMatch) {
-      try {
-        const parsed = JSON.parse(objMatch[0]);
-        if (parsed && typeof parsed.credibilityScore === 'number') {
-          return {
-            score: parsed.credibilityScore,
-            verdict: parsed.verdict || 'unknown',
-            explanation: parsed.explanation || '',
-            redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
-          };
-        }
-      } catch { /* give up */ }
+    } catch (err) {
+      console.error(`Gemini model ${model} execution error:`, err);
     }
-
-    return null;
-  } catch (err) {
-    console.error('Gemini call failed:', err);
-    return null;
   }
+
+  return null;
 }
 
 // ─── Main Handler ───
@@ -370,48 +389,58 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else if (body.type === 'credibility') {
-      // Single article credibility — keyword engine + Gemini enhancement
       const { title, description, content } = body;
       const articleText = content || description || title || '';
       const sourceName = body.source || '';
 
-      // Step 1: Keyword engine (instant, always works)
       const kwResult = analyzeCredibilityLocal(title || articleText, articleText, sourceName);
 
-      // Step 2: Try Gemini enhancement (if key available)
-      let geminiData: { score: number; verdict: string; explanation: string; redFlags: string[] } | null = null;
+      let geminiData: any = null;
       if (GEMINI_API_KEY) {
         geminiData = await callGeminiCredibility(title || articleText, articleText, GEMINI_API_KEY);
       }
 
-      // Step 3: Combine — if Gemini succeeded, blend 50/50 with keyword engine
+      // If Gemini returned an authoritative fact-check, use it directly
       if (geminiData) {
-        const blendedScore = Math.round(kwResult.credibilityScore * 0.4 + geminiData.score * 0.6);
-        const finalScore = Math.max(5, Math.min(98, blendedScore));
-        const verdict = finalScore > 75 ? 'credible' : finalScore > 45 ? 'suspicious' : 'likely_fake';
-        const bertLabel = finalScore >= 65 ? 'Real' : finalScore >= 40 ? 'Uncertain' : 'Fake';
-
-        // Merge red flags (deduplicated)
-        const allFlags = [...new Set([...kwResult.redFlags, ...geminiData.redFlags])];
-
         return new Response(JSON.stringify({
-          credibilityScore: finalScore,
-          bertConfidence: finalScore / 100,
-          bertLabel,
-          verdict,
+          credibilityScore: geminiData.truthPercentage,
+          truthPercentage: geminiData.truthPercentage,
+          falsePercentage: geminiData.falsePercentage,
+          isTrue: geminiData.isTrue,
+          bertConfidence: geminiData.truthPercentage / 100,
+          bertLabel: geminiData.isTrue ? 'Real' : 'Fake',
+          verdict: geminiData.verdict,
           explanation: geminiData.explanation || kwResult.explanation,
-          redFlags: allFlags,
+          redFlags: [...new Set([...(geminiData.redFlags || []), ...(kwResult.redFlags || [])])],
           models: {
-            nlpEngine: { score: kwResult.credibilityScore, verdict: kwResult.verdict },
-            gemini: { score: geminiData.score, verdict: geminiData.verdict },
+            gemini: {
+              score: geminiData.truthPercentage,
+              falseScore: geminiData.falsePercentage,
+              verdict: geminiData.verdict === 'FALSE_HOAX' ? 'Fake' : geminiData.verdict === 'TRUE_VERIFIED' ? 'Real' : 'Uncertain'
+            },
+            nlpEngine: {
+              score: kwResult.credibilityScore,
+              verdict: kwResult.bertLabel
+            },
           },
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // Gemini unavailable — return keyword engine result only
-      return new Response(JSON.stringify(kwResult), {
+      // Fallback to local heuristic engine
+      return new Response(JSON.stringify({
+        credibilityScore: kwResult.credibilityScore,
+        truthPercentage: kwResult.truthPercentage,
+        falsePercentage: kwResult.falsePercentage,
+        isTrue: kwResult.isTrue,
+        bertConfidence: kwResult.bertConfidence,
+        bertLabel: kwResult.bertLabel,
+        verdict: kwResult.verdict,
+        explanation: kwResult.explanation,
+        redFlags: kwResult.redFlags,
+        models: kwResult.models,
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else {

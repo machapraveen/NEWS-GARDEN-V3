@@ -85,7 +85,7 @@ async function getCachedArticles(supabase: any): Promise<AnalyzedArticle[] | nul
     .from('news_articles')
     .select('*')
     .order('fetched_at', { ascending: false })
-    .limit(100);
+    .limit(500);
 
   if (error) { console.error('Cache read error:', error); return null; }
   if (!articles || articles.length === 0) return null;
@@ -923,30 +923,31 @@ function inferLocation(article: RawArticle): { city: string; district: string; s
     return { city: '', district: '', state: st, country: 'India', continent: 'Asia', lat: jitter(coords.lat, 1), lng: jitter(coords.lng, 1) };
   }
 
-  // 2. City matching (longest name first: "new delhi" before "delhi", "san francisco" before "san")
   const sortedCities = Object.entries(MAJOR_CITIES).sort((a, b) => b[0].length - a[0].length);
-  for (const [cityName, cityData] of sortedCities) {
-    if (text.includes(cityName)) {
-      return {
-        city: titleCase(cityName), district: '', state: cityData.state,
-        country: cityData.country, continent: cityData.continent,
-        lat: jitter(cityData.lat), lng: jitter(cityData.lng),
-      };
-    }
-  }
 
-  // 3. Country hint from GNews region fetch — use COUNTRY_CODE_MAP
-  const hintCountry = article._hint?.country;
+  // 2. Country hint from GNews region fetch or JIT country query — prioritize country anchor!
+  const hintCountry = (article._hint?.country || '').toLowerCase().trim();
   if (hintCountry) {
-    const countryInfo = COUNTRY_CODE_MAP[hintCountry];
+    const countryInfo = COUNTRY_CODE_MAP[hintCountry] || (COUNTRY_COORDS as any)[hintCountry];
     if (countryInfo) {
+      const cName = (countryInfo.country || hintCountry).toLowerCase();
+      // Check if any city in text matches THIS hinted country specifically
+      for (const [cityName, cityData] of sortedCities) {
+        if (cityData.country.toLowerCase() === cName && text.includes(cityName)) {
+          return {
+            city: titleCase(cityName), district: '', state: cityData.state,
+            country: countryInfo.country, continent: countryInfo.continent,
+            lat: jitter(cityData.lat), lng: jitter(cityData.lng),
+          };
+        }
+      }
+
       // For India: try broad keyword matching against INDIAN_STATE_KEYWORDS
       if (hintCountry === 'in') {
         for (const [state, keywords] of Object.entries(INDIAN_STATE_KEYWORDS)) {
           for (const kw of keywords) {
             if (text.includes(kw)) {
               const stCoords = INDIAN_STATES[state] || { lat: 20.5937, lng: 78.9629 };
-              // Also check if we can resolve a city within this state
               for (const [cn, cd] of sortedCities) {
                 if (cd.state === state && cd.country === 'India' && text.includes(cn)) {
                   return { city: titleCase(cn), district: '', state, country: 'India', continent: 'Asia', lat: jitter(cd.lat), lng: jitter(cd.lng) };
@@ -956,32 +957,28 @@ function inferLocation(article: RawArticle): { city: string; district: string; s
             }
           }
         }
-        // India source name fallback — check SOURCE_LOCATION
         for (const [src, loc] of Object.entries(SOURCE_LOCATION)) {
           if (sourceLower.includes(src) && loc.country === 'India') {
             return { city: loc.city, district: '', state: loc.state, country: loc.country, continent: loc.continent, lat: jitter(loc.lat), lng: jitter(loc.lng) };
           }
         }
-        // Generic India — scatter across India
-        return { city: '', district: '', state: '', country: 'India', continent: 'Asia', lat: jitter(20.5937, 10), lng: jitter(78.9629, 10) };
+        return { city: '', district: '', state: '', country: 'India', continent: 'Asia', lat: jitter(20.5937, 8), lng: jitter(78.9629, 8) };
       }
 
       // For US: try US_STATE_KEYWORDS matching
       if (hintCountry === 'us') {
-        // Sort by key length descending to match "north carolina" before "carolina"
         const sortedUSStates = Object.entries(US_STATE_KEYWORDS).sort((a, b) => b[0].length - a[0].length);
         for (const [kw, stInfo] of sortedUSStates) {
           if (text.includes(kw)) {
             return { city: '', district: '', state: stInfo.state, country: 'United States', continent: 'North America', lat: jitter(stInfo.lat, 1), lng: jitter(stInfo.lng, 1) };
           }
         }
-        // US source name fallback
         for (const [src, loc] of Object.entries(SOURCE_LOCATION)) {
           if (sourceLower.includes(src) && loc.country === 'United States') {
             return { city: loc.city, district: '', state: loc.state, country: loc.country, continent: loc.continent, lat: jitter(loc.lat), lng: jitter(loc.lng) };
           }
         }
-        return { city: '', district: '', state: '', country: 'United States', continent: 'North America', lat: jitter(38.9, 12), lng: jitter(-98.35, 15) };
+        return { city: '', district: '', state: '', country: 'United States', continent: 'North America', lat: jitter(38.9, 10), lng: jitter(-98.35, 12) };
       }
 
       // For UK: try common city names
@@ -991,11 +988,22 @@ function inferLocation(article: RawArticle): { city: string; district: string; s
             return { city: loc.city, district: '', state: loc.state, country: loc.country, continent: loc.continent, lat: jitter(loc.lat), lng: jitter(loc.lng) };
           }
         }
-        return { city: '', district: '', state: '', country: countryInfo.country, continent: countryInfo.continent, lat: jitter(countryInfo.lat, 3), lng: jitter(countryInfo.lng, 3) };
+        return { city: '', district: '', state: '', country: countryInfo.country, continent: countryInfo.continent, lat: jitter(countryInfo.lat, 2), lng: jitter(countryInfo.lng, 2) };
       }
 
-      // All other countries with hint
-      return { city: '', district: '', state: '', country: countryInfo.country, continent: countryInfo.continent, lat: jitter(countryInfo.lat, 3), lng: jitter(countryInfo.lng, 3) };
+      // All other hinted countries — securely anchor to the specified country
+      return { city: '', district: '', state: '', country: countryInfo.country, continent: countryInfo.continent, lat: jitter(countryInfo.lat, 2), lng: jitter(countryInfo.lng, 2) };
+    }
+  }
+
+  // 3. No hint — unhinted city matching (longest name first)
+  for (const [cityName, cityData] of sortedCities) {
+    if (text.includes(cityName)) {
+      return {
+        city: titleCase(cityName), district: '', state: cityData.state,
+        country: cityData.country, continent: cityData.continent,
+        lat: jitter(cityData.lat), lng: jitter(cityData.lng),
+      };
     }
   }
 
