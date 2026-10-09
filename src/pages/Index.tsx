@@ -388,6 +388,7 @@ const Index = () => {
           showHeatmap={showHeatmap}
           articles={articles}
           focusLocation={focusLocation}
+          onSelectCountry={handleSelectCountry}
         />
 
         {/* Selected Country Executive Intelligence Card */}
