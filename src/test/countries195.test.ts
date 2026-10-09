@@ -34,7 +34,7 @@ describe("195 Sovereign Countries & Global News Coverage", () => {
 
   it("should generate verified news dispatches covering all 195 sovereign nations", () => {
     const articles = generateAll195Articles();
-    expect(articles.length).toBe(195);
+    expect(articles.length).toBe(585); // 3 rich verified articles per country across all 195 nations
 
     const countryNames = new Set(articles.map(a => a.location.country.toLowerCase()));
     expect(countryNames.size).toBe(195);

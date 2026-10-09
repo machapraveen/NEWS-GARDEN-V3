@@ -51,3 +51,5 @@ my_research/
 frontend/
 
 ss/
+scratch/
+*.tmp

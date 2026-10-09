@@ -176,14 +176,15 @@ const Index = () => {
   const handleSelectCountry = useCallback(
     async (country: CountryInfo) => {
       setSelectedCountry(country);
-      setFocusLocation({ lat: country.lat, lng: country.lng, altitude: 1.7 });
+      setFocusLocation({ lat: country.lat, lng: country.lng, altitude: 0.65 });
 
       // Check if we already have articles for this country in memory
       const qName = country.name.toLowerCase();
       const qCode = country.code.toLowerCase();
       const existing = allArticles.filter(a => {
         const c = (a.location?.country || "").toLowerCase();
-        return c === qName || c === qCode;
+        const h = (a.headline || "").toLowerCase();
+        return c === qName || c === qCode || h.includes(qName);
       });
 
       // If we have fewer than 2 articles, trigger JIT on-demand fetch using Enterprise API
@@ -191,15 +192,26 @@ const Index = () => {
         setCountryLoading(true);
         try {
           const fresh = await fetchCountryNews(country.code, country.name, false);
-          if (fresh.length > 0) {
+          const matchingFresh = fresh.filter(a => {
+            const c = (a.location?.country || "").toLowerCase();
+            const h = (a.headline || "").toLowerCase();
+            return c === qName || c === qCode || h.includes(qName);
+          });
+
+          if (matchingFresh.length > 0) {
             setAllArticles(prev => {
               const seenUrls = new Set(prev.map(a => a.sourceUrl));
-              const newUnique = fresh.filter(a => a.sourceUrl && !seenUrls.has(a.sourceUrl));
+              const newUnique = matchingFresh.filter(a => a.sourceUrl && !seenUrls.has(a.sourceUrl));
               return [...prev, ...newUnique];
             });
             toast({
-              title: `${country.flag} ${country.name} Loaded`,
-              description: `Indexed ${fresh.length} fresh stories for ${country.name}.`,
+              title: `${country.flag} ${country.name} Updated`,
+              description: `Discovered ${matchingFresh.length} fresh dispatches for ${country.name}.`,
+            });
+          } else {
+            toast({
+              title: `${country.flag} ${country.name}`,
+              description: `Displaying verified dispatches for ${country.name}.`,
             });
           }
         } catch (err) {
@@ -207,6 +219,11 @@ const Index = () => {
         } finally {
           setCountryLoading(false);
         }
+      } else {
+        toast({
+          title: `${country.flag} ${country.name}`,
+          description: `Displaying ${existing.length} verified dispatches for ${country.name}.`,
+        });
       }
     },
     [allArticles, toast]
@@ -391,6 +408,7 @@ const Index = () => {
           articles={articles}
           focusLocation={focusLocation}
           onSelectCountry={handleSelectCountry}
+          selectedCountry={selectedCountry}
         />
 
         {/* Selected Country Executive Intelligence Card */}

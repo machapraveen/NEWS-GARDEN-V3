@@ -22,6 +22,7 @@ interface GlobeProps {
   articles: NewsArticle[];
   focusLocation?: { lat: number; lng: number; altitude?: number } | null;
   onSelectCountry?: (country: CountryInfo) => void;
+  selectedCountry?: CountryInfo | null;
 }
 
 // ─── Curated Luminescent Sentiment Palette ───
@@ -96,6 +97,7 @@ export default function Globe({
   articles,
   focusLocation,
   onSelectCountry,
+  selectedCountry,
 }: GlobeProps) {
   const globeRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -239,13 +241,82 @@ export default function Globe({
     []
   );
 
-  // Combined rings: markers + arrival ripples + planetary shield
+  // Check if a GeoJSON polygon feature matches the currently selected country
+  const isSelectedPolygon = useCallback(
+    (feature: any) => {
+      if (!selectedCountry || !feature?.properties) return false;
+      const pName = (feature.properties.NAME || feature.properties.ADMIN || "").toLowerCase().trim();
+      const pCode = (feature.properties.ISO_A2 || feature.properties.POSTAL || "").toLowerCase().trim();
+      const pCode3 = (feature.properties.ISO_A3 || feature.properties.ADM0_A3 || "").toLowerCase().trim();
+      const sName = selectedCountry.name.toLowerCase().trim();
+      const sCode = selectedCountry.code.toLowerCase().trim();
+      return (
+        pCode === sCode ||
+        pName === sName ||
+        pCode3 === sCode ||
+        pName.includes(sName) ||
+        sName.includes(pName)
+      );
+    },
+    [selectedCountry]
+  );
+
+  // Active polygons: if in 'polygons' mode, show all countries; otherwise, if a country is selected, display its polygon!
+  const activePolygons = useMemo(() => {
+    if (viewMode === "polygons") {
+      return geoCountries;
+    }
+    if (selectedCountry) {
+      return geoCountries.filter(isSelectedPolygon);
+    }
+    return [];
+  }, [viewMode, geoCountries, selectedCountry, isSelectedPolygon]);
+
+  // Target radar beacon for selected country
+  const selectedCountryRing = useMemo(() => {
+    if (!selectedCountry) return null;
+    return {
+      lat: selectedCountry.lat,
+      lng: selectedCountry.lng,
+      isSelectedBeacon: true,
+      sentiment: "positive" as const,
+      articleCount: 15,
+    };
+  }, [selectedCountry]);
+
+  // Combined rings: markers + arrival ripples + planetary shield + selected country radar
   const activeRings = useMemo(() => {
     const list: any[] = viewMode === "beacons" ? [...markers] : [];
     if (clickRings.length > 0) list.push(...clickRings);
     if (showShield) list.push(shieldRing);
+    if (selectedCountryRing) list.push(selectedCountryRing);
     return list;
-  }, [viewMode, markers, clickRings, showShield, shieldRing]);
+  }, [viewMode, markers, clickRings, showShield, shieldRing, selectedCountryRing]);
+
+  // Active labels: show city/country labels and always spotlight selected country with a 3D flag pin!
+  const activeLabels = useMemo(() => {
+    const base = viewMode === "labels" ? markers.slice(0, 32) : [];
+    if (selectedCountry) {
+      const pin = {
+        lat: selectedCountry.lat,
+        lng: selectedCountry.lng,
+        city: `${selectedCountry.flag} ${selectedCountry.name.toUpperCase()}`,
+        country: selectedCountry.capital,
+        sentiment: "positive" as const,
+        articleCount: 12,
+        isSelectedCountryPin: true,
+      };
+      return [
+        pin,
+        ...base.filter(
+          (b) =>
+            Math.abs(b.lat - selectedCountry.lat) > 2 ||
+            Math.abs(b.lng - selectedCountry.lng) > 2
+        ),
+      ];
+    }
+    return base;
+  }, [viewMode, markers, selectedCountry]);
 
   // Window resize listener
   useEffect(() => {
@@ -413,7 +484,7 @@ export default function Globe({
         globe.controls().autoRotate = false;
         setAutoRotate(false);
         if (matched) {
-          globe.pointOfView({ lat: matched.lat, lng: matched.lng, altitude: 1.7 }, 1000);
+          globe.pointOfView({ lat: matched.lat, lng: matched.lng, altitude: 0.65 }, 1000);
         }
       }
     },
@@ -540,21 +611,23 @@ export default function Globe({
         ringsData={activeRings}
         ringLat="lat"
         ringLng="lng"
-        ringAltitude={(d: any) => (d.isShield ? 0.22 : 0.003)}
+        ringAltitude={(d: any) => (d.isSelectedBeacon ? 0.025 : d.isShield ? 0.22 : 0.003)}
         ringColor={(d: any) => {
+          if (d.isSelectedBeacon) return () => "rgba(6, 182, 212, 0.95)";
           if (d.isShield) return () => "rgba(6, 182, 212, 0.45)";
           const m = d as GlobeMarker;
           const c = SENTIMENT_COLORS[m.sentiment] || "#10b981";
           return [c, "rgba(0,0,0,0)"];
         }}
         ringMaxRadius={(d: any) => {
+          if (d.isSelectedBeacon) return 6.5;
           if (d.isShield) return 180;
           const m = d as GlobeMarker;
           const boost = showHeatmap ? 1.5 : 1.0;
           return (2.2 + Math.min(3.2, Math.log10((m.articleCount || 1) + 1) * 2.0)) * boost;
         }}
-        ringPropagationSpeed={(d: any) => (d.isShield ? 20 : showHeatmap ? 1.6 : 1.1)}
-        ringRepeatPeriod={(d: any) => (d.isShield ? 2400 : showHeatmap ? 1400 : 2000)}
+        ringPropagationSpeed={(d: any) => (d.isSelectedBeacon ? 4.5 : d.isShield ? 20 : showHeatmap ? 1.6 : 1.1)}
+        ringRepeatPeriod={(d: any) => (d.isSelectedBeacon ? 900 : d.isShield ? 2400 : showHeatmap ? 1400 : 2000)}
         // ── 3. Wire Transmission Arcs & Interactive Photon Lasers ('arcs' Mode & Globe Clicks) ──
         arcsData={activeArcs}
         arcStartLat="startLat"
@@ -606,12 +679,14 @@ export default function Globe({
             if (m) handleMarkerClick(m);
           }
         }}
-        // ── 6. Choropleth Country Polygons ('polygons' Mode - vasturiano choropleth-countries) ──
-        polygonsData={viewMode === "polygons" ? geoCountries : []}
+        // ── 6. Choropleth Country Polygons ('polygons' Mode & Selected Country Focus) ──
+        polygonsData={activePolygons}
         polygonGeoJsonGeometry="geometry"
         polygonCapColor={(d: any) => {
+          const isSelected = isSelectedPolygon(d);
+          if (isSelected) return "rgba(6, 182, 212, 0.95)"; // Electric glowing cyan spotlight
           const isHovered = hoveredPolygon === d;
-          if (isHovered) return "rgba(6, 182, 212, 0.85)"; // Glowing cyan highlight
+          if (isHovered) return "rgba(6, 182, 212, 0.85)";
           const stats = getCountryStats(d, countryStatsMap);
           if (stats && stats.total > 0) {
             return stats.dominant === "positive"
@@ -623,6 +698,8 @@ export default function Globe({
           return "rgba(255, 255, 255, 0.06)";
         }}
         polygonSideColor={(d: any) => {
+          const isSelected = isSelectedPolygon(d);
+          if (isSelected) return "rgba(6, 182, 212, 0.65)"; // Glowing 3D cyan wall
           const stats = getCountryStats(d, countryStatsMap);
           if (stats && stats.total > 0) {
             return stats.dominant === "positive"
@@ -634,6 +711,8 @@ export default function Globe({
           return "rgba(255, 255, 255, 0.02)";
         }}
         polygonStrokeColor={(d: any) => {
+          const isSelected = isSelectedPolygon(d);
+          if (isSelected) return "#38bdf8"; // Bright neon cyan border
           const isHovered = hoveredPolygon === d;
           if (isHovered) return "rgba(6, 182, 212, 1.0)";
           const stats = getCountryStats(d, countryStatsMap);
@@ -642,7 +721,9 @@ export default function Globe({
             : "rgba(255, 255, 255, 0.15)";
         }}
         polygonAltitude={(d: any) => {
-          if (hoveredPolygon === d) return 0.12; // Smooth elevated lift on hover (vasturiano style)
+          const isSelected = isSelectedPolygon(d);
+          if (isSelected) return 0.16; // 3D elevated plateau standing tall
+          if (hoveredPolygon === d) return 0.10; // Lift on hover
           const stats = getCountryStats(d, countryStatsMap);
           return stats && stats.total > 0
             ? Math.min(0.06, 0.02 + stats.total * 0.004)
@@ -657,6 +738,7 @@ export default function Globe({
         hexPolygonsData={viewMode === "hexmatrix" ? geoCountries : []}
         hexPolygonGeoJsonGeometry="geometry"
         hexPolygonColor={(d: any) => {
+          if (isSelectedPolygon(d)) return "rgba(6, 182, 212, 1.0)";
           const stats = getCountryStats(d, countryStatsMap);
           if (stats && stats.total > 0) {
             return stats.dominant === "positive"
@@ -667,24 +749,28 @@ export default function Globe({
           }
           return "rgba(255, 255, 255, 0.14)";
         }}
-        hexPolygonAltitude={0.008}
+        hexPolygonAltitude={(d: any) => (isSelectedPolygon(d) ? 0.05 : 0.008)}
         hexPolygonResolution={3}
         hexPolygonMargin={0.28}
         hexPolygonUseDots={true}
         hexPolygonsTransitionDuration={300}
         onHexPolygonClick={handlePolygonClick}
         hexPolygonLabel={(d: any) => renderPolygonTooltip(d, countryStatsMap)}
-        // ── 8. 3D Floating Typography Labels ('labels' Mode) ──
-        labelsData={viewMode === "labels" ? markers.slice(0, 32) : []}
+        // ── 8. 3D Floating Typography Labels ('labels' Mode & Spotlight Pin) ──
+        labelsData={activeLabels}
         labelLat="lat"
         labelLng="lng"
         labelText={(d: any) => `${d.city || d.country}`}
         labelSize={(d: any) =>
-          Math.min(1.4, 0.85 + Math.log10((d.articleCount || 1) + 1) * 0.4)
+          d.isSelectedCountryPin
+            ? 1.85
+            : Math.min(1.4, 0.85 + Math.log10((d.articleCount || 1) + 1) * 0.4)
         }
-        labelDotRadius={0.45}
-        labelColor={(d: any) => SENTIMENT_COLORS[d.sentiment]}
-        labelAltitude={0.015}
+        labelDotRadius={(d: any) => (d.isSelectedCountryPin ? 0.8 : 0.45)}
+        labelColor={(d: any) =>
+          d.isSelectedCountryPin ? "#38bdf8" : SENTIMENT_COLORS[d.sentiment]
+        }
+        labelAltitude={(d: any) => (d.isSelectedCountryPin ? 0.06 : 0.015)}
         labelResolution={3}
         labelsTransitionDuration={300}
         onLabelClick={handleMarkerClick}
@@ -776,8 +862,14 @@ function renderMarkerTooltip(m: GlobeMarker): string {
   `;
 }
 
-function renderArcTooltip(arc: NewsArc): string {
-  const sentColor = SENTIMENT_COLORS[arc.sentiment];
+function renderArcTooltip(arc: any): string {
+  const fromCity = arc.fromName || arc.sourceCity || "Origin Hub";
+  const toCity = arc.toName || arc.destinationCity || "Destination Hub";
+  const headline = arc.topHeadline || arc.headline || "Trans-continental News Conduit";
+  const count = arc.articleCount || 1;
+  const sent = arc.destinationMarker?.sentiment || "positive";
+  const sentColor = SENTIMENT_COLORS[sent as keyof typeof SENTIMENT_COLORS] || "#38bdf8";
+
   return `
     <div style="
       background: rgba(10, 15, 29, 0.92);
@@ -795,13 +887,14 @@ function renderArcTooltip(arc: NewsArc): string {
         ⚡ Information Transmission Arc
       </div>
       <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">
-        ${arc.sourceCity} ➔ ${arc.destinationCity}
+        ${escapeHtml(fromCity)} ➔ ${escapeHtml(toCity)}
       </div>
       <div style="font-size: 11px; color: #cbd5e1; font-style: italic;">
-        "${escapeHtml(arc.headline)}"
+        "${escapeHtml(headline.slice(0, 80))}${headline.length > 80 ? "..." : ""}"
       </div>
-      <div style="font-size: 9px; color: ${sentColor}; margin-top: 4px; font-weight: 600;">
-        Syndication: ${arc.source}
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: ${sentColor}; margin-top: 6px; font-weight: 600; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px;">
+        <span>📡 Syndication Traffic</span>
+        <span>${count} Active Dispatches</span>
       </div>
     </div>
   `;

@@ -7,8 +7,8 @@ interface CacheEntry {
   contentHash: string;
 }
 
-// Version 5 explicitly ensures all 195 sovereign nations are present in the cache
-const CACHE_KEY = 'news_garden_cache_v5_195';
+// Version 6 explicitly guarantees 585+ stories covering all 195 nations
+const CACHE_KEY = 'news_garden_cache_v6_585';
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 function readCache(): CacheEntry | null {
@@ -16,8 +16,8 @@ function readCache(): CacheEntry | null {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const entry: CacheEntry = JSON.parse(raw);
-    // If the cache was stored with fewer than 195 countries, re-hydrate with full 195 dataset
-    if (entry.articles && entry.articles.length < 195) {
+    // If the cache was stored with fewer than 580 articles, re-hydrate with full dataset
+    if (entry.articles && entry.articles.length < 580) {
       entry.articles = mergeWithGlobal195News(entry.articles);
     }
     return entry;
@@ -28,7 +28,7 @@ function readCache(): CacheEntry | null {
 
 function writeCache(entry: CacheEntry): void {
   try {
-    // Always guarantee that cache stored in localStorage covers all 195 nations
+    // Always guarantee that cache stored in localStorage covers all 195 nations with 3+ stories
     const fullArticles = mergeWithGlobal195News(entry.articles);
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       ...entry,
@@ -40,7 +40,7 @@ function writeCache(entry: CacheEntry): void {
 export function getCachedNews(category: string | null): NewsArticle[] | null {
   const entry = readCache();
   if (!entry) {
-    // Return pre-warmed 195 sovereign country news if cache is empty
+    // Return pre-warmed 585+ articles if cache is empty
     return getGlobal195Articles();
   }
 
@@ -68,12 +68,13 @@ export function getCacheEntry(category: string | null): CacheEntry | null {
 
 export function clearCache(category?: string | null): void {
   localStorage.removeItem(CACHE_KEY);
-  // Also clean up any legacy v1-v4 cache keys
+  // Also clean up any legacy cache keys
   try {
     localStorage.removeItem('news_garden_cache');
     localStorage.removeItem('news_garden_cache_v2');
     localStorage.removeItem('news_garden_cache_v3');
     localStorage.removeItem('news_garden_cache_v4');
+    localStorage.removeItem('news_garden_cache_v5_195');
   } catch {}
 }
 
