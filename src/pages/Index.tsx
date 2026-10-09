@@ -21,6 +21,7 @@ import {
   findCountry,
 } from "@/data/countriesData";
 import { getCachedNews, setCachedNews, clearCache, getCacheEntry } from "@/lib/newsCache";
+import { mergeWithGlobal195News } from "@/data/global195News";
 import { Link } from "react-router-dom";
 import {
   BarChart3,
@@ -88,16 +89,17 @@ const Index = () => {
       setNoNewUpdates(false);
 
       try {
-        const data = await fetchAndAnalyzeNews(null, 100, forceRefresh);
-        const newHash = generateContentHash(data);
+        const data = await fetchAndAnalyzeNews(null, 500, forceRefresh);
+        const merged = mergeWithGlobal195News(data);
+        const newHash = generateContentHash(merged);
 
         const cacheEntry = getCacheEntry(null);
-        if (cacheEntry && cacheEntry.contentHash === newHash && data.length > 0) {
+        if (!forceRefresh && cacheEntry && cacheEntry.contentHash === newHash && merged.length > 0) {
           setNoNewUpdates(true);
           setLastRefresh(new Date());
-        } else if (data.length > 0) {
-          setAllArticles(data);
-          setCachedNews(null, data, newHash);
+        } else if (merged.length > 0) {
+          setAllArticles(merged);
+          setCachedNews(null, merged, newHash);
           setLastRefresh(new Date());
           setLastChangedAt(new Date());
           lastChangedAtRef.current = new Date();

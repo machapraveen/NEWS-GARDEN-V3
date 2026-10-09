@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import { NewsArticle, NamedEntity, categories } from "@/data/mockNews";
 import { fetchAndAnalyzeNews } from "@/lib/api/news";
-import { getCachedNews } from "@/lib/newsCache";
+import { getCachedNews, clearCache } from "@/lib/newsCache";
+import { mergeWithGlobal195News } from "@/data/global195News";
 import {
   PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -89,9 +90,10 @@ export default function Dashboard() {
     }
 
     try {
-      const data = await fetchAndAnalyzeNews(null, 100, force);
-      if (data.length > 0) {
-        setArticles(data);
+      const data = await fetchAndAnalyzeNews(null, 500, force);
+      const merged = mergeWithGlobal195News(data);
+      if (merged.length > 0) {
+        setArticles(merged);
         setError(false);
       }
     } catch {
@@ -100,12 +102,13 @@ export default function Dashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [articles.length]);
 
   useEffect(() => { loadNews(false); }, [loadNews]);
 
   const handleRefresh = () => {
     setRefreshing(true);
+    clearCache(null);
     loadNews(true);
   };
 

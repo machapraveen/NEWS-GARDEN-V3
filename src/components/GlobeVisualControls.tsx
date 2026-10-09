@@ -13,14 +13,15 @@ import {
   Plus,
   Minus,
   Crosshair,
-  Sliders,
+  Sparkles,
+  Cloud,
+  Grid,
   ChevronDown,
   ChevronUp,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type GlobeViewMode = "beacons" | "arcs" | "hexbin" | "polygons" | "labels";
+export type GlobeViewMode = "beacons" | "arcs" | "hexbin" | "polygons" | "hexmatrix" | "labels";
 export type GlobeTheme = "night" | "day" | "cyber";
 
 interface GlobeVisualControlsProps {
@@ -35,6 +36,8 @@ interface GlobeVisualControlsProps {
   onResetView: () => void;
   showAtmosphere: boolean;
   onToggleAtmosphere: () => void;
+  showClouds: boolean;
+  onToggleClouds: () => void;
   totalArticles: number;
 }
 
@@ -43,6 +46,7 @@ const MODES: { id: GlobeViewMode; label: string; icon: any; desc: string }[] = [
   { id: "arcs", label: "Wire Arcs", icon: Zap, desc: "Cross-continental news transmission & syndication streams" },
   { id: "hexbin", label: "Hex Towers", icon: Box, desc: "3D hexagonal density prisms scaled by news concentration" },
   { id: "polygons", label: "Choropleth", icon: Map, desc: "Interactive sovereign country borders with real-time sentiment glow" },
+  { id: "hexmatrix", label: "Hex Matrix", icon: Grid, desc: "Cybernetic glowing hexagonal dot-matrix country meshes (vasturiano style)" },
   { id: "labels", label: "3D Labels", icon: Tag, desc: "Floating spatial typography for world metropolitan hubs" },
 ];
 
@@ -64,6 +68,8 @@ export default function GlobeVisualControls({
   onResetView,
   showAtmosphere,
   onToggleAtmosphere,
+  showClouds,
+  onToggleClouds,
   totalArticles,
 }: GlobeVisualControlsProps) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -99,15 +105,15 @@ export default function GlobeVisualControls({
 
         {isExpanded && (
           <div className="pt-2 space-y-2.5 animate-in fade-in-50 duration-200">
-            {/* ── 1. Visualization Layer Modes (5 Types of Globe) ── */}
+            {/* ── 1. Visualization Layer Modes (6 Globe Showcase Styles) ── */}
             <div>
               <div className="text-[10px] uppercase font-semibold text-muted-foreground/70 tracking-wider px-1 mb-1.5 flex items-center justify-between">
-                <span>Visualization Mode</span>
-                <span className="text-[9px] text-primary/80 lowercase">
-                  {MODES.find((m) => m.id === currentMode)?.desc.slice(0, 24)}...
+                <span>Globe Visual Mode</span>
+                <span className="text-[9px] text-primary/80 lowercase truncate max-w-[170px]">
+                  {MODES.find((m) => m.id === currentMode)?.label} active
                 </span>
               </div>
-              <div className="grid grid-cols-5 gap-1">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
                 {MODES.map((m) => {
                   const Icon = m.icon;
                   const isActive = currentMode === m.id;
@@ -123,7 +129,7 @@ export default function GlobeVisualControls({
                       title={m.desc}
                     >
                       <Icon className="w-3.5 h-3.5 mb-1" />
-                      <span className="text-[10px] font-semibold tracking-tight">
+                      <span className="text-[10px] font-semibold tracking-tight leading-tight">
                         {m.label}
                       </span>
                     </button>
@@ -161,7 +167,7 @@ export default function GlobeVisualControls({
 
             {/* ── 3. Interactive Camera & Atmosphere Tools ── */}
             <div className="pt-1 border-t border-white/[0.08] flex items-center justify-between gap-1">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-wrap">
                 {/* Auto Rotate Toggle */}
                 <Button
                   size="sm"
@@ -181,7 +187,7 @@ export default function GlobeVisualControls({
                   <span>Rotate</span>
                 </Button>
 
-                {/* Atmosphere Toggle */}
+                {/* Atmosphere Aura Toggle */}
                 <Button
                   size="sm"
                   variant="ghost"
@@ -195,6 +201,22 @@ export default function GlobeVisualControls({
                 >
                   <Sparkles className="w-3 h-3 mr-1" />
                   <span>Aura</span>
+                </Button>
+
+                {/* 3D Atmospheric Clouds Toggle */}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onToggleClouds}
+                  className={`h-7 px-2 rounded-lg text-[10px] border transition-all ${
+                    showClouds
+                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                      : "bg-transparent text-muted-foreground border-white/[0.08] hover:text-white"
+                  }`}
+                  title="Toggle 3D Orbiting Clouds Layer (vasturiano style)"
+                >
+                  <Cloud className="w-3 h-3 mr-1" />
+                  <span>Clouds</span>
                 </Button>
               </div>
 

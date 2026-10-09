@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from "react";
 import GlobeGL from "react-globe.gl";
+import * as THREE from "three";
 import { GlobeMarker, getGlobeMarkers, Category, NewsArticle } from "@/data/mockNews";
 import { generateNewsArcs, type NewsArc } from "@/data/globeArcs";
 import { COUNTRIES_DATA, type CountryInfo } from "@/data/countriesData";
@@ -77,6 +78,9 @@ export default function Globe({
   const [theme, setTheme] = useState<GlobeTheme>("night");
   const [autoRotate, setAutoRotate] = useState(true);
   const [showAtmosphere, setShowAtmosphere] = useState(true);
+  const [showClouds, setShowClouds] = useState(true);
+  const cloudsMeshRef = useRef<THREE.Mesh | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
   // Data layers
   const [markers, setMarkers] = useState<GlobeMarker[]>([]);
@@ -197,7 +201,7 @@ export default function Globe({
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  // Initial globe camera setup
+  // Initial globe camera, specular ocean lighting & 3D atmospheric clouds setup (vasturiano style)
   useEffect(() => {
     const globe = globeRef.current;
     if (globe) {
@@ -205,8 +209,85 @@ export default function Globe({
       globe.controls().autoRotateSpeed = 0.45;
       globe.controls().enableZoom = true;
       globe.pointOfView({ altitude: 2.3 }, 1000);
+
+      // Enhance globe material with ocean specular reflections
+      try {
+        const globeMaterial = globe.globeMaterial ? globe.globeMaterial() : null;
+        if (globeMaterial) {
+          globeMaterial.bumpScale = 10;
+          new THREE.TextureLoader().load(
+            "//unpkg.com/three-globe/example/img/earth-water.png",
+            (waterTexture) => {
+              globeMaterial.specularMap = waterTexture;
+              globeMaterial.specular = new THREE.Color("#64748b");
+              globeMaterial.shininess = 15;
+              globeMaterial.needsUpdate = true;
+            }
+          );
+        }
+
+        // Configure sunlight directional lighting
+        const scene = globe.scene ? globe.scene() : null;
+        if (scene) {
+          const directionalLight = scene.children.find(
+            (obj: any) => obj.type === "DirectionalLight"
+          );
+          if (directionalLight) {
+            directionalLight.position.set(1.5, 1, 1);
+            directionalLight.intensity = 1.4;
+          }
+
+          // Add volumetric 3D orbiting clouds layer
+          const radius = globe.getGlobeRadius ? globe.getGlobeRadius() : 100;
+          const loader = new THREE.TextureLoader();
+          loader.load(
+            "//unpkg.com/three-globe/example/img/clouds.png",
+            (cloudsTexture) => {
+              if (!globeRef.current) return;
+              const cloudsGeo = new THREE.SphereGeometry(radius * 1.004, 75, 75);
+              const cloudsMat = new THREE.MeshPhongMaterial({
+                map: cloudsTexture,
+                transparent: true,
+                opacity: 0.82,
+                blending: THREE.AdditiveBlending,
+              });
+              const mesh = new THREE.Mesh(cloudsGeo, cloudsMat);
+              mesh.visible = showClouds;
+              scene.add(mesh);
+              cloudsMeshRef.current = mesh;
+
+              const rotateClouds = () => {
+                if (cloudsMeshRef.current) {
+                  cloudsMeshRef.current.rotation.y += -0.0003;
+                }
+                animFrameRef.current = requestAnimationFrame(rotateClouds);
+              };
+              rotateClouds();
+            }
+          );
+        }
+      } catch (err) {
+        console.warn("Globe Three.js enhancement notice:", err);
+      }
     }
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (cloudsMeshRef.current && globeRef.current?.scene) {
+        globeRef.current.scene().remove(cloudsMeshRef.current);
+        cloudsMeshRef.current.geometry.dispose();
+        (cloudsMeshRef.current.material as THREE.Material).dispose();
+        cloudsMeshRef.current = null;
+      }
+    };
   }, []);
+
+  // Sync clouds visibility with state toggle
+  useEffect(() => {
+    if (cloudsMeshRef.current) {
+      cloudsMeshRef.current.visible = showClouds;
+    }
+  }, [showClouds]);
 
   // Synchronize auto-rotation
   useEffect(() => {
@@ -314,9 +395,9 @@ export default function Globe({
         // ── Atmosphere Glow ──
         atmosphereColor={showAtmosphere ? currentTexture.atmosphere : "transparent"}
         atmosphereAltitude={showAtmosphere ? currentTexture.altitude : 0}
-        // ── 1. Points / Beacons Layer (Active in 'beacons', 'arcs', 'labels') ──
+        // ── 1. Points / Beacons Layer (Active in 'beacons', 'arcs', 'labels', 'hexmatrix') ──
         pointsData={
-          viewMode === "beacons" || viewMode === "arcs" || viewMode === "labels"
+          viewMode === "beacons" || viewMode === "arcs" || viewMode === "labels" || viewMode === "hexmatrix"
             ? markers
             : []
         }
@@ -431,6 +512,26 @@ export default function Globe({
         onPolygonHover={setHoveredPolygon}
         onPolygonClick={handlePolygonClick}
         polygonLabel={(d: any) => renderPolygonTooltip(d, countryStatsMap)}
+        // ── 5b. Cybernetic Hex Matrix Mode ('hexmatrix' Mode - vasturiano style) ──
+        hexPolygonsData={viewMode === "hexmatrix" ? geoCountries : []}
+        hexPolygonGeoJsonGeometry="geometry"
+        hexPolygonColor={(d: any) => {
+          const stats = getCountryStats(d, countryStatsMap);
+          if (stats && stats.total > 0) {
+            return stats.dominant === "positive"
+              ? "rgba(16, 185, 129, 0.75)"
+              : stats.dominant === "negative"
+              ? "rgba(244, 63, 94, 0.75)"
+              : "rgba(245, 158, 11, 0.75)";
+          }
+          return "rgba(255, 255, 255, 0.12)";
+        }}
+        hexPolygonAltitude={0.008}
+        hexPolygonResolution={3}
+        hexPolygonMargin={0.28}
+        hexPolygonUseDots={true}
+        onHexPolygonClick={handlePolygonClick}
+        hexPolygonLabel={(d: any) => renderPolygonTooltip(d, countryStatsMap)}
         // ── 6. 3D Floating Typography Labels ('labels' Mode) ──
         labelsData={viewMode === "labels" ? markers.slice(0, 24) : []}
         labelLat="lat"
@@ -463,6 +564,8 @@ export default function Globe({
         onResetView={handleResetView}
         showAtmosphere={showAtmosphere}
         onToggleAtmosphere={() => setShowAtmosphere(!showAtmosphere)}
+        showClouds={showClouds}
+        onToggleClouds={() => setShowClouds(!showClouds)}
         totalArticles={articles.length}
       />
     </div>
