@@ -23,6 +23,7 @@ interface GlobeProps {
   focusLocation?: { lat: number; lng: number; altitude?: number } | null;
   onSelectCountry?: (country: CountryInfo) => void;
   selectedCountry?: CountryInfo | null;
+  isSidebarOpen?: boolean;
 }
 
 // ─── Curated Luminescent Sentiment Palette ───
@@ -98,6 +99,7 @@ export default function Globe({
   focusLocation,
   onSelectCountry,
   selectedCountry,
+  isSidebarOpen,
 }: GlobeProps) {
   const globeRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -801,6 +803,7 @@ export default function Globe({
         onToggleClickArcs={() => setEnableClickArcs(!enableClickArcs)}
         onSelectRegion={handleSelectRegion}
         totalArticles={articles.length}
+        isSidebarOpen={isSidebarOpen}
       />
     </div>
   );

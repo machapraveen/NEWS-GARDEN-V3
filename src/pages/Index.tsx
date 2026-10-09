@@ -409,10 +409,11 @@ const Index = () => {
           focusLocation={focusLocation}
           onSelectCountry={handleSelectCountry}
           selectedCountry={selectedCountry}
+          isSidebarOpen={Boolean(selectedMarker)}
         />
 
-        {/* Selected Country Executive Intelligence Card */}
-        {selectedCountry && (
+        {/* Selected Country Executive Intelligence Card (shown when no marker sidebar is active) */}
+        {selectedCountry && !selectedMarker && (
           <CountryPulseCard
             country={selectedCountry}
             articles={allArticles}
@@ -424,7 +425,28 @@ const Index = () => {
                   m.country.toLowerCase() === selectedCountry.name.toLowerCase() ||
                   Math.abs(m.lat - selectedCountry.lat) < 5
               );
-              if (match) setSelectedMarker(match);
+              if (match) {
+                setSelectedMarker(match);
+              } else {
+                // Construct temporary hub marker from country centroid
+                setSelectedMarker({
+                  id: `hub-${selectedCountry.code}`,
+                  city: selectedCountry.capital,
+                  state: selectedCountry.capital,
+                  country: selectedCountry.name,
+                  continent: selectedCountry.region,
+                  lat: selectedCountry.lat,
+                  lng: selectedCountry.lng,
+                  sentiment: "positive",
+                  sentimentScore: 0.8,
+                  articleCount: allArticles.filter(
+                    a => (a.location?.country || "").toLowerCase() === selectedCountry.name.toLowerCase()
+                  ).length || 3,
+                  topArticle: allArticles.find(
+                    a => (a.location?.country || "").toLowerCase() === selectedCountry.name.toLowerCase()
+                  ) || allArticles[0],
+                });
+              }
             }}
           />
         )}
@@ -648,7 +670,7 @@ const Index = () => {
       <NewsPanel
         marker={selectedMarker}
         onClose={() => setSelectedMarker(null)}
-        articles={articles}
+        articles={allArticles}
       />
     </div>
   );

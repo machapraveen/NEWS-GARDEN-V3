@@ -57,6 +57,7 @@ interface GlobeVisualControlsProps {
   onToggleClickArcs: () => void;
   onSelectRegion?: (region: GeopoliticalRegion) => void;
   totalArticles: number;
+  isSidebarOpen?: boolean;
 }
 
 const MODES: { id: GlobeViewMode; label: string; icon: any; desc: string }[] = [
@@ -105,11 +106,18 @@ export default function GlobeVisualControls({
   onToggleClickArcs,
   onSelectRegion,
   totalArticles,
+  isSidebarOpen = false,
 }: GlobeVisualControlsProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <div className="fixed bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end gap-2 select-none">
+    <div
+      className={`fixed bottom-6 z-40 flex flex-col items-end gap-2 select-none transition-all duration-300 ease-in-out ${
+        isSidebarOpen
+          ? "right-4 sm:right-[500px]"
+          : "right-4 sm:right-6"
+      }`}
+    >
       {/* Floating dock */}
       <div className="glass rounded-2xl border border-white/[0.12] bg-black/65 backdrop-blur-2xl shadow-2xl p-2.5 max-w-sm sm:max-w-md w-auto text-foreground transition-all duration-300">
         {/* Dock Header & Toggle */}
