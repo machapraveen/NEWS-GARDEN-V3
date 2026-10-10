@@ -296,21 +296,25 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
     ).toLowerCase().trim();
 
     const currentCountry = (marker.country || countryInfo?.name || "").toLowerCase().trim();
+    const currentCapital = (countryInfo?.capital || "").toLowerCase().trim();
 
     if (!targetRegion) return [];
 
     return articles.filter((a) => {
       const aCountry = (a.location?.country || "").toLowerCase().trim();
+      const aCity = (a.location?.city || "").toLowerCase().trim();
       const aContinent = (a.location?.continent || "").toLowerCase().trim();
 
       // Explicitly exclude stories belonging to this sovereign country
       if (aCountry === currentCountry) return false;
+      if (currentCapital && aCity === currentCapital) return false;
 
-      // Match region or continent
+      // Match region or continent — global195News uses region names (e.g. "Europe") as continent field
       return (
         (aContinent && aContinent === targetRegion) ||
-        (countryInfo && countryInfo.region.toLowerCase().includes(aContinent)) ||
-        targetRegion.includes(aContinent)
+        (aContinent && targetRegion.includes(aContinent)) ||
+        (aContinent && aContinent.includes(targetRegion)) ||
+        (countryInfo && aContinent === countryInfo.region.toLowerCase())
       );
     });
   }, [marker, countryInfo, articles]);
@@ -522,9 +526,9 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as any)}
-        className="flex-1 flex flex-col min-h-0"
+        className="flex-1 flex flex-col min-h-0 overflow-hidden"
       >
-        <div className="px-4 sm:px-5 pt-3 pb-2 border-b border-white/[0.08] bg-slate-900/30">
+        <div className="px-4 sm:px-5 pt-3 pb-2 border-b border-white/[0.08] bg-slate-900/30 shrink-0">
           <TabsList className="grid grid-cols-3 w-full bg-slate-900/80 border border-white/10 p-1 rounded-xl">
             <TabsTrigger
               value="hub"
@@ -548,7 +552,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
         </div>
 
         {/* ── TAB 1: Hub Dispatches ── */}
-        <TabsContent value="hub" className="flex-1 flex flex-col min-h-0 m-0 p-0">
+        <TabsContent value="hub" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0 p-0">
           {/* In-Panel Filter Toolbar */}
           <div className="px-4 sm:px-5 py-2.5 border-b border-white/[0.08] bg-slate-900/40 space-y-2">
             <div className="relative">
@@ -598,7 +602,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
           </div>
 
           {/* Articles Feed */}
-          <ScrollArea className="flex-1 p-4 sm:p-5">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {filteredHubArticles.length > 0 ? (
               <div className="space-y-3 pb-6">
                 {filteredHubArticles.map((article) => (
@@ -629,12 +633,12 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
                 </Button>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </TabsContent>
 
         {/* ── TAB 2: Regional Concourse ── */}
-        <TabsContent value="regional" className="flex-1 flex flex-col min-h-0 m-0 p-0">
-          <div className="px-4 sm:px-5 py-2.5 border-b border-white/[0.08] bg-slate-900/40 text-xs text-slate-400 flex items-center justify-between">
+        <TabsContent value="regional" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0 p-0">
+          <div className="px-4 sm:px-5 py-2.5 border-b border-white/[0.08] bg-slate-900/40 text-xs text-slate-400 flex items-center justify-between shrink-0">
             <span>
               Neighboring Cross-Border Dispatches ({regionName})
             </span>
@@ -643,7 +647,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
             </span>
           </div>
 
-          <ScrollArea className="flex-1 p-4 sm:p-5">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {regionalArticles.length > 0 ? (
               <div className="space-y-3 pb-6">
                 {regionalArticles.map((article) => (
@@ -655,96 +659,166 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 px-4 text-slate-400 text-xs">
-                No external regional stories indexed for {regionName}.
+              <div className="text-center py-12 px-4">
+                <div className="w-12 h-12 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                  <Globe2 className="w-5 h-5" />
+                </div>
+                <h4 className="text-sm font-semibold text-slate-200 mb-1">No Regional Stories Yet</h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">Regional coverage for {regionName} will appear as news from neighboring nations is indexed.</p>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </TabsContent>
 
         {/* ── TAB 3: Radar Pulse & Topic Telemetry ── */}
-        <TabsContent value="pulse" className="flex-1 flex flex-col min-h-0 m-0 p-0">
-          <ScrollArea className="flex-1 p-4 sm:p-5 space-y-4">
+        <TabsContent value="pulse" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0 p-0">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
             {/* Geopolitical Summary Card */}
             <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur-md">
-              <div className="flex items-center gap-2 text-xs font-bold text-primary mb-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-primary mb-3">
                 <Compass className="w-4 h-4 text-primary" />
                 <span>Geopolitical Hub Telemetry</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-                    National Capital
-                  </span>
-                  <span className="font-semibold text-slate-200 mt-0.5 block truncate">
-                    {capital}
-                  </span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">National Capital</span>
+                  <span className="font-semibold text-slate-200 block truncate">{capital}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-                    Geopolitical Basin
-                  </span>
-                  <span className="font-semibold text-slate-200 mt-0.5 block truncate">
-                    {regionName}
-                  </span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">Geopolitical Basin</span>
+                  <span className="font-semibold text-slate-200 block truncate">{regionName}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-                    Monitored Dispatches
-                  </span>
-                  <span className="font-semibold text-cyan-400 mt-0.5 block">
-                    {hubStats.total} stories
-                  </span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">Monitored Dispatches</span>
+                  <span className="font-semibold text-cyan-400 block">{hubStats.total} stories</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-                    Network Trust Score
-                  </span>
-                  <span className="font-semibold text-emerald-400 mt-0.5 block">
-                    {hubStats.avgCred}% Verified
-                  </span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">Network Trust Score</span>
+                  <span className="font-semibold text-emerald-400 block">{hubStats.avgCred}% Verified</span>
                 </div>
               </div>
             </div>
 
-            {/* Contributing Syndication Sources */}
+            {/* Sentiment Breakdown Visual */}
             <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur-md">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-3">
-                <Building2 className="w-4 h-4 text-primary" />
-                <span>Top Syndication Outlets</span>
+                <BarChart3 className="w-4 h-4 text-primary" />
+                <span>Sentiment Intelligence Breakdown</span>
               </div>
               <div className="space-y-2">
-                {topSources.map(([source, count]) => (
-                  <div
-                    key={source}
-                    className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs"
-                  >
-                    <span className="font-medium text-slate-300">{source}</span>
-                    <span className="text-[11px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">
-                      {count} {count === 1 ? "dispatch" : "dispatches"}
-                    </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-emerald-400 w-20 shrink-0">✅ Optimistic</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.7)] transition-all duration-700" style={{ width: `${hubStats.posPct}%` }} />
                   </div>
-                ))}
+                  <span className="text-[10px] text-slate-400 w-12 text-right shrink-0">{hubStats.posPct}% ({hubStats.pos})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-amber-400 w-20 shrink-0">⚖️ Balanced</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-amber-400 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.7)] transition-all duration-700" style={{ width: `${hubStats.neuPct}%` }} />
+                  </div>
+                  <span className="text-[10px] text-slate-400 w-12 text-right shrink-0">{hubStats.neuPct}% ({hubStats.neu})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-rose-400 w-20 shrink-0">⚠️ Critical</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.7)] transition-all duration-700" style={{ width: `${hubStats.negPct}%` }} />
+                  </div>
+                  <span className="text-[10px] text-slate-400 w-12 text-right shrink-0">{hubStats.negPct}% ({hubStats.neg})</span>
+                </div>
               </div>
-            </div>
-
-            {/* AI Sentiment Analysis Card */}
-            <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur-md">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span>AI Sentinel Assessment</span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Coverage for {hubTitle} reflects a predominantly{" "}
-                <strong className="text-slate-200 capitalize font-semibold">
-                  {hubStats.dominant}
-                </strong>{" "}
-                narrative ({hubStats.posPct}% optimistic vs {hubStats.negPct}% critical).
-                Media dispatches cross-verified with institutional source rating of{" "}
-                <span className="text-emerald-400 font-semibold">{hubStats.avgCred}%</span>.
+              <p className="text-xs text-slate-400 leading-relaxed mt-3 pt-3 border-t border-white/[0.06]">
+                Coverage for <strong className="text-slate-200 capitalize">{hubTitle}</strong> reflects a predominantly{" "}
+                <strong className="capitalize" style={{ color: hubStats.dominant === 'positive' ? '#10b981' : hubStats.dominant === 'negative' ? '#f43f5e' : '#f59e0b' }}>{hubStats.dominant}</strong>{" "}
+                narrative. Dispatches cross-verified with <span className="text-emerald-400 font-semibold">{hubStats.avgCred}%</span> institutional trust score.
               </p>
             </div>
-          </ScrollArea>
+
+            {/* Category Distribution */}
+            {availableCategories.length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-3">
+                  <Layers className="w-4 h-4 text-primary" />
+                  <span>Topic Coverage Matrix</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {availableCategories.map((cat) => {
+                    const catCount = hubArticles.filter(a => a.category === cat).length;
+                    const pct = hubStats.total > 0 ? Math.round((catCount / hubStats.total) * 100) : 0;
+                    return (
+                      <div key={cat} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                        <span className="text-[10px] text-slate-300 font-medium">{CATEGORY_ICONS[cat] || '📰'} {cat}</span>
+                        <span className="text-[10px] font-mono text-cyan-400">{catCount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Top Contributing Syndication Sources */}
+            {topSources.length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-3">
+                  <Building2 className="w-4 h-4 text-primary" />
+                  <span>Top Syndication Outlets</span>
+                </div>
+                <div className="space-y-2">
+                  {topSources.map(([source, count]) => (
+                    <div key={source} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs">
+                      <span className="font-medium text-slate-300 truncate max-w-[200px]">{source}</span>
+                      <span className="text-[11px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded shrink-0">
+                        {count} {count === 1 ? "dispatch" : "dispatches"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Top Stories Preview */}
+            {hubArticles.slice(0, 3).length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-200 mb-3">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span>Top Intelligence Signals</span>
+                </div>
+                <div className="space-y-2">
+                  {hubArticles.slice(0, 3).map((article, i) => (
+                    <Link
+                      key={article.id}
+                      to={`/article/${encodeURIComponent(article.id)}`}
+                      state={{ article }}
+                      className="block p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:border-primary/30 hover:bg-primary/5 transition-all group"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-[10px] font-mono text-slate-600 shrink-0 mt-0.5">#{i + 1}</span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-200 group-hover:text-primary transition-colors line-clamp-2 leading-snug">{article.headline}</p>
+                          <p className="text-[10px] text-slate-500 mt-1">{article.source} • {article.category}</p>
+                        </div>
+                        <ArrowUpRight className="w-3 h-3 text-slate-600 group-hover:text-primary shrink-0 mt-0.5 transition-colors" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Empty state for Radar Pulse when no hub articles */}
+            {hubArticles.length === 0 && (
+              <div className="text-center py-10 px-4">
+                <div className="w-14 h-14 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center mx-auto mb-3">
+                  <Radio className="w-6 h-6 text-slate-500" />
+                </div>
+                <h4 className="text-sm font-semibold text-slate-300 mb-1">Radar Scanning...</h4>
+                <p className="text-xs text-slate-500">No local dispatches indexed for this hub yet. Regional coverage is being processed.</p>
+              </div>
+            )}
+
+            <div className="pb-4" />
+          </div>
         </TabsContent>
       </Tabs>
 

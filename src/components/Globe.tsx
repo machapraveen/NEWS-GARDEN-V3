@@ -580,6 +580,7 @@ export default function Globe({
   return (
     <div ref={containerRef} className="w-full h-full relative">
       <GlobeGL
+        key={`globe-${theme}`}
         ref={globeRef}
         showGlobe={currentTexture.showGlobe}
         globeImageUrl={currentTexture.globe}
