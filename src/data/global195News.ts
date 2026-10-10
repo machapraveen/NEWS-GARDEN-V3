@@ -231,7 +231,7 @@ export function generateAll195Articles(): NewsArticle[] {
         fullText,
         source,
         sourceUrl: `https://news.google.com/search?q=${encodeURIComponent(country.name + ' ' + bp.category)}`,
-        imageUrl: `https://images.unsplash.com/photo-${1500000000000 + ((countryIndex * 3 + slotIndex) * 148391) % 99999999}?auto=format&fit=crop&w=800&q=80`,
+        imageUrl: `https://picsum.photos/seed/ngv3-${country.code}-${slotIndex}/800/400`,
         timestamp: articleTimestamp,
         category: bp.category,
         sentiment: bp.sentiment,
