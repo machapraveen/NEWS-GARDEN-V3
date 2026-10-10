@@ -1,8 +1,10 @@
 import { useParams, useLocation, Link } from "react-router-dom";
 import { ArrowLeft, Volume2, VolumeX, Shield, AlertTriangle, Flag, Bot, Users, Loader2, ExternalLink, Brain } from "lucide-react";
-import { useState } from "react";
-import { NewsArticle } from "@/data/mockNews";
+import { useState, useMemo } from "react";
+import { NewsArticle, mockArticles } from "@/data/mockNews";
 import { analyzeArticleFull } from "@/lib/api/news";
+import { getCachedNews } from "@/lib/newsCache";
+import { getGlobal195Articles } from "@/data/global195News";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -19,7 +21,33 @@ const sentimentStyles = {
 export default function ArticleDetail() {
   const { id } = useParams();
   const location = useLocation();
-  const article = (location.state as any)?.article as NewsArticle | undefined;
+  const stateArticle = (location.state as any)?.article as NewsArticle | undefined;
+
+  // Fallback lookup by ID if location.state was not passed (e.g. direct link, refresh, external navigation)
+  const article = useMemo(() => {
+    if (stateArticle) return stateArticle;
+    if (!id) return undefined;
+    const decodedId = decodeURIComponent(id);
+
+    // 1. Check local cache
+    const cachedArticles = getCachedNews(null);
+    if (cachedArticles && Array.isArray(cachedArticles)) {
+      const match = cachedArticles.find(a => a.id === id || a.id === decodedId);
+      if (match) return match;
+    }
+
+    // 2. Check 195 sovereign countries news repository
+    const global195 = getGlobal195Articles();
+    const gMatch = global195.find(a => a.id === id || a.id === decodedId);
+    if (gMatch) return gMatch;
+
+    // 3. Check mock articles
+    const mockMatch = mockArticles.find(a => a.id === id || a.id === decodedId);
+    if (mockMatch) return mockMatch;
+
+    return undefined;
+  }, [stateArticle, id]);
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [reports, setReports] = useState(article?.communityReports || 0);
   const [credibility, setCredibility] = useState<any>(null);
@@ -47,10 +75,18 @@ export default function ArticleDetail() {
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-display text-2xl text-foreground mb-2">Article Not Found</h1>
-          <Link to="/" className="text-primary hover:underline">Back to Globe</Link>
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center glass p-8 rounded-2xl border border-white/10 shadow-2xl">
+          <div className="w-12 h-12 rounded-full bg-white/[0.08] flex items-center justify-center mx-auto mb-3 text-primary">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h1 className="font-display text-xl text-foreground font-bold mb-2">Dispatch Not Found</h1>
+          <p className="text-xs text-muted-foreground mb-6">
+            The requested news dispatch could not be found or has expired from the live telemetry feed.
+          </p>
+          <Link to="/" className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg bg-primary text-slate-950 hover:bg-primary/90 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Globe
+          </Link>
         </div>
       </div>
     );
@@ -61,7 +97,7 @@ export default function ArticleDetail() {
       speechSynthesis.cancel();
       setIsSpeaking(false);
     } else {
-      const utterance = new SpeechSynthesisUtterance(article.fullText || article.summary);
+      const utterance = new SpeechSynthesisUtterance(article.fullText || article.summary || article.headline);
       utterance.onend = () => setIsSpeaking(false);
       speechSynthesis.speak(utterance);
       setIsSpeaking(true);
@@ -69,14 +105,19 @@ export default function ArticleDetail() {
   };
 
   // Use AI analysis results if available, otherwise article defaults
-  const displayCategory = analysis?.category || article.category;
-  const displaySentiment = analysis?.sentiment || article.sentiment;
-  const displaySentimentScore = analysis?.sentimentScore ?? article.sentimentScore;
-  const displayEntities = analysis?.entities?.length > 0 ? analysis.entities : article.entities;
-  const displaySummary = analysis?.aiSummary || article.aiSummary;
+  const displayCategory = analysis?.category || article.category || "General";
+  const displaySentiment = analysis?.sentiment || article.sentiment || "neutral";
+  const displaySentimentScore = analysis?.sentimentScore ?? article.sentimentScore ?? 0.5;
+  const rawEntities = (analysis?.entities && Array.isArray(analysis.entities) && analysis.entities.length > 0)
+    ? analysis.entities
+    : (article.entities && Array.isArray(article.entities))
+    ? article.entities
+    : [];
+  const displayEntities = Array.isArray(rawEntities) ? rawEntities : [];
+  const displaySummary = analysis?.aiSummary || article.aiSummary || article.summary;
   const displayLocation = analysis?.location || article.location;
 
-  const credScore = credibility?.credibilityScore ?? article.credibilityScore;
+  const credScore = credibility?.credibilityScore ?? article.credibilityScore ?? 75;
   const credibilityColor = credScore > 80 ? "text-sentiment-positive" : credScore > 50 ? "text-sentiment-neutral" : "text-sentiment-negative";
   const credibilityLabel = credScore > 80 ? "Highly Credible" : credScore > 50 ? "Moderate Credibility" : "Low Credibility";
 
@@ -121,7 +162,10 @@ export default function ArticleDetail() {
           </h1>
           <p className="text-muted-foreground">{article.summary}</p>
           <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground flex-wrap">
-            <span>{article.location.city}, {article.location.country}</span>
+            <span>
+              {article.location?.city || article.location?.country || "Global Hub"}
+              {article.location?.country ? `, ${article.location.country}` : ""}
+            </span>
             <span>{new Date(article.timestamp).toLocaleString()}</span>
             {article.sourceUrl && (
               <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">

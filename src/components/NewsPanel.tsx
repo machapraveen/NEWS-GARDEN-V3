@@ -128,9 +128,10 @@ function ArticleCard({
   article: NewsArticle;
   badgeContext?: string;
 }) {
-  const sentConfig = SENTIMENT_COLORS[article.sentiment] || SENTIMENT_COLORS.neutral;
-  const timeAgo = getTimeAgo(article.timestamp);
-  const catIcon = CATEGORY_ICONS[article.category] || "📰";
+  if (!article) return null;
+  const sentConfig = (article.sentiment && SENTIMENT_COLORS[article.sentiment]) || SENTIMENT_COLORS.neutral;
+  const timeAgo = article.timestamp ? getTimeAgo(article.timestamp) : "Recently";
+  const catIcon = (article.category && CATEGORY_ICONS[article.category]) || "📰";
 
   return (
     <div
@@ -228,10 +229,9 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  if (!marker) return null;
-
-  // 1. Identify sovereign country metadata
+  // 1. Identify sovereign country metadata — must be before any conditional return
   const countryInfo = useMemo(() => {
+    if (!marker) return null;
     if (marker.country) {
       const found = findCountry(marker.country);
       if (found) return found;
@@ -245,6 +245,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
 
   // 2. Compute Direct Hub Dispatches (Strictly matching this city & sovereign nation)
   const hubArticles = useMemo(() => {
+    if (!marker) return [];
     const mCountry = (marker.country || "").toLowerCase().trim();
     const mCity = (marker.city || "").toLowerCase().trim();
     const mState = (marker.state || "").toLowerCase().trim();
@@ -287,6 +288,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
 
   // 3. Compute Regional Concourse Dispatches (Neighboring nations in same region, EXCLUDING current country)
   const regionalArticles = useMemo(() => {
+    if (!marker) return [];
     const targetRegion = (
       countryInfo?.region ||
       marker.topArticle?.location?.continent ||
@@ -395,6 +397,9 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
       .slice(0, 6);
   }, [hubArticles]);
 
+  // All hooks must run above — conditional early return goes here
+  if (!marker) return null;
+
   const flag = countryInfo?.flag || "🌐";
   const capital = countryInfo?.capital || marker.city || "Metropolitan Hub";
   const hubTitle = marker.city || marker.country || "Global News Hub";
@@ -440,7 +445,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
               <div className="flex items-center gap-2 mt-1 flex-wrap text-[11px] text-slate-400">
                 <span className="inline-flex items-center gap-1 font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md">
                   <MapPin className="w-3 h-3 text-cyan-400 shrink-0" />
-                  {marker.lat.toFixed(2)}°, {marker.lng.toFixed(2)}°
+                  {(marker?.lat ?? 0).toFixed(2)}°, {(marker?.lng ?? 0).toFixed(2)}°
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10">
                   {regionName}
@@ -645,7 +650,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
                   <ArticleCard
                     key={article.id}
                     article={article}
-                    badgeContext={article.location.country}
+                    badgeContext={article.location?.country || "Regional"}
                   />
                 ))}
               </div>

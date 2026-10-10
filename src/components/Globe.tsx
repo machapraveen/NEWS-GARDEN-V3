@@ -222,13 +222,15 @@ export default function Globe({
 
   // HexBin raw data points
   const hexPoints = useMemo(() => {
-    return articles.map((a) => ({
-      lat: a.location.lat,
-      lng: a.location.lng,
-      weight: 1,
-      article: a,
-      sentiment: a.sentiment,
-    }));
+    return articles
+      .filter((a) => a.location?.lat != null && a.location?.lng != null)
+      .map((a) => ({
+        lat: a.location.lat,
+        lng: a.location.lng,
+        weight: 1,
+        article: a,
+        sentiment: a.sentiment,
+      }));
   }, [articles]);
 
   // Planetary Shield ring (vasturiano earth-shield example)
@@ -452,13 +454,14 @@ export default function Globe({
   // Marker click handler
   const handleMarkerClick = useCallback(
     (marker: object) => {
+      if (!marker) return;
       const m = marker as GlobeMarker;
       onMarkerClick(m);
       const globe = globeRef.current;
-      if (globe) {
+      if (globe && typeof m.lat === "number" && typeof m.lng === "number") {
         globe.controls().autoRotate = false;
         setAutoRotate(false);
-        globe.pointOfView({ lat: m.lat, lng: m.lng, altitude: 1.6 }, 1000);
+        globe.pointOfView({ lat: m.lat, lng: m.lng, altitude: 0.65 }, 1000);
       }
     },
     [onMarkerClick]
@@ -812,22 +815,27 @@ export default function Globe({
 // ── Tooltip Renderers ──
 
 function renderMarkerTooltip(m: GlobeMarker): string {
-  const sentColor = SENTIMENT_COLORS[m.sentiment];
-  const sentBg = SENTIMENT_BG[m.sentiment];
-  const sentBorder = SENTIMENT_BORDER[m.sentiment];
-  const categoryBadge = m.topArticle.category;
-  const timeAgo = getTimeAgo(m.topArticle.timestamp);
-  const totalInHub = m.articleCount || 1;
+  if (!m) return "";
+  const sent = m.sentiment || "neutral";
+  const sentColor = SENTIMENT_COLORS[sent] || "#10b981";
+  const sentBg = SENTIMENT_BG[sent] || "rgba(16, 185, 129, 0.16)";
+  const sentBorder = SENTIMENT_BORDER[sent] || "rgba(16, 185, 129, 0.5)";
+  const categoryBadge = m.topArticle?.category || "Verified Dispatches";
+  const timeAgo = m.topArticle?.timestamp ? getTimeAgo(m.topArticle.timestamp) : "Recently monitored";
+  const totalInHub = m.articleCount || (m.articles ? m.articles.length : 1);
+  const headline = m.topArticle?.headline || "Global Intelligence Concentration";
+  const city = m.city || "Metropolitan Hub";
+  const country = m.country || "Territory";
 
   return `
     <div style="
-      background: rgba(10, 15, 29, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(10, 15, 29, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 14px;
       padding: 12px 14px;
       color: #f8fafc;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 0 20px ${sentBg};
+      box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px ${sentBg};
       backdrop-filter: blur(16px);
       max-width: 320px;
       pointer-events: none;
@@ -835,8 +843,8 @@ function renderMarkerTooltip(m: GlobeMarker): string {
     ">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <span style="font-weight: 700; font-size: 13px; color: #ffffff;">📍 ${m.city}</span>
-          <span style="color: #94a3b8; font-size: 11px;">(${m.country})</span>
+          <span style="font-weight: 700; font-size: 13px; color: #ffffff;">📍 ${escapeHtml(city)}</span>
+          <span style="color: #94a3b8; font-size: 11px;">(${escapeHtml(country)})</span>
         </div>
         <span style="
           background: ${sentBg};
@@ -849,12 +857,12 @@ function renderMarkerTooltip(m: GlobeMarker): string {
           padding: 2px 7px;
           border-radius: 9999px;
         ">
-          ${m.sentiment}
+          ${sent}
         </span>
       </div>
 
       <div style="font-size: 12px; font-weight: 600; color: #f1f5f9; margin-bottom: 6px;">
-        ${escapeHtml(m.topArticle.headline)}
+        ${escapeHtml(headline)}
       </div>
 
       <div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: #94a3b8; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);">
