@@ -339,3 +339,47 @@ export function getCountryName(feature: { properties?: { name?: string }; id?: s
     `ID:${feature.id}`
   );
 }
+
+// Dynamically populate missing countries
+import { COUNTRIES_DATA } from './countriesData';
+
+COUNTRIES_DATA.forEach((country) => {
+  if (!NEWS_CHANNELS[country.name]) {
+    NEWS_CHANNELS[country.name] = {
+      continent: country.region,
+      channels: [
+        {
+          name: `${country.name} National TV`,
+          lang: 'Local/English',
+          url: `https://www.youtube.com/results?search_query=${encodeURIComponent(country.name + ' News Live')}`,
+          type: 'Public',
+        },
+      ],
+    };
+  }
+});
+
+// Dynamically populate remaining Indian States and UTs
+const ALL_INDIAN_STATES_UTS = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+  'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana',
+  'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu & Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+];
+
+if (NEWS_CHANNELS['India'] && NEWS_CHANNELS['India'].states) {
+  ALL_INDIAN_STATES_UTS.forEach(state => {
+    if (!NEWS_CHANNELS['India'].states![state]) {
+      NEWS_CHANNELS['India'].states![state] = [
+        {
+          name: `${state} State News`,
+          lang: 'Regional',
+          url: `https://www.youtube.com/results?search_query=${encodeURIComponent(state + ' News Live')}`,
+          type: 'State',
+        }
+      ];
+    }
+  });
+}
+

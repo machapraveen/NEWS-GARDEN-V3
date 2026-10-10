@@ -254,15 +254,27 @@ export default function NewsChannelsGlobe() {
           )}
         </div>
       </div>
-      <a
-        href={channel.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ml-3 flex shrink-0 items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-700"
-      >
-        <Play className="h-3 w-3 fill-white" />
-        {compact ? 'YT' : 'YouTube'}
-      </a>
+      <div className="ml-3 flex shrink-0 flex-col sm:flex-row items-center gap-2">
+        <a
+          href={channel.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+          title="Go to Channel Home Page"
+        >
+          Home
+        </a>
+        <a
+          href={channel.url.includes('youtube.com/@') ? `${channel.url}/live` : channel.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-md bg-red-600/90 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]"
+          title="Watch Live Stream"
+        >
+          <Play className="h-3 w-3 fill-white" />
+          Live
+        </a>
+      </div>
     </div>
   );
 
