@@ -552,7 +552,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
         </div>
 
         {/* ── TAB 1: Hub Dispatches ── */}
-        <TabsContent value="hub" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0 p-0">
+        <TabsContent value="hub" className="data-[state=active]:flex-1 data-[state=active]:flex flex-col min-h-0 overflow-hidden m-0 p-0 border-none outline-none">
           {/* In-Panel Filter Toolbar */}
           <div className="px-4 sm:px-5 py-2.5 border-b border-white/[0.08] bg-slate-900/40 space-y-2">
             <div className="relative">
@@ -637,7 +637,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
         </TabsContent>
 
         {/* ── TAB 2: Regional Concourse ── */}
-        <TabsContent value="regional" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0 p-0">
+        <TabsContent value="regional" className="data-[state=active]:flex-1 data-[state=active]:flex flex-col min-h-0 overflow-hidden m-0 p-0 border-none outline-none">
           <div className="px-4 sm:px-5 py-2.5 border-b border-white/[0.08] bg-slate-900/40 text-xs text-slate-400 flex items-center justify-between shrink-0">
             <span>
               Neighboring Cross-Border Dispatches ({regionName})
@@ -671,7 +671,7 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
         </TabsContent>
 
         {/* ── TAB 3: Radar Pulse & Topic Telemetry ── */}
-        <TabsContent value="pulse" className="flex-1 flex flex-col min-h-0 overflow-hidden m-0 p-0">
+        <TabsContent value="pulse" className="data-[state=active]:flex-1 data-[state=active]:flex flex-col min-h-0 overflow-hidden m-0 p-0 border-none outline-none">
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
             {/* Geopolitical Summary Card */}
             <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur-md">
