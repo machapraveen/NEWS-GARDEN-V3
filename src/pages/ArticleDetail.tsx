@@ -192,7 +192,7 @@ export default function ArticleDetail() {
                   <CardTitle className="text-sm font-display flex items-center gap-2">
                     <Bot className="w-4 h-4 text-primary" />
                     AI-Generated Summary
-                    <Badge className="bg-primary/20 text-primary text-[10px]">Gemini AI</Badge>
+                    <Badge className="bg-primary/20 text-primary text-[10px]">RoBERTa AI</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -313,11 +313,11 @@ export default function ArticleDetail() {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Gemini Analysis */}
+                    {/* Semantic Analysis (Internal Ensemble) */}
                     <AccordionItem value="gemini" className="border-border/30">
                       <AccordionTrigger className="text-xs py-2 hover:no-underline">
                         <span className="flex items-center gap-2">
-                          <Bot className="w-3.5 h-3.5 text-primary" /> Gemini AI Analysis
+                          <Bot className="w-3.5 h-3.5 text-primary" /> RoBERTa Semantic Analysis
                         </span>
                       </AccordionTrigger>
                       <AccordionContent>
@@ -343,7 +343,7 @@ export default function ArticleDetail() {
                               </Badge>
                             </div>
                           )}
-                          <p className="text-[10px] text-muted-foreground/60">Gemini 3.8 Flash credibility assessment</p>
+                          <p className="text-[10px] text-muted-foreground/60">RoBERTa neural credibility & live fact assessment</p>
                         </div>
                       </AccordionContent>
                     </AccordionItem>

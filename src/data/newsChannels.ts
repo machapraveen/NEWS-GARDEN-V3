@@ -6,8 +6,27 @@ export interface Channel {
   name: string;
   lang: string;
   url: string;
+  liveUrl?: string;
   type?: string;
   scope?: 'global' | 'national' | 'state';
+}
+
+// Helper: Get channel home URL (always a valid 200 OK channel/search page)
+export function getChannelHomeUrl(channel: Channel): string {
+  return channel.url;
+}
+
+// Helper: Automatically trigger live stream URL if a live broadcast is running
+export function getChannelLiveUrl(channel: Channel): string {
+  if (channel.liveUrl) return channel.liveUrl;
+  if (channel.url.includes('youtube.com/@')) {
+    return `${channel.url.replace(/\/$/, '')}/live`;
+  }
+  if (channel.url.includes('youtube.com/results?search_query=')) {
+    // sp=EgJAAQ%253D%253D is YouTube's official "LIVE NOW" filter parameter
+    return channel.url.includes('&sp=') ? channel.url : `${channel.url}&sp=EgJAAQ%253D%253D`;
+  }
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(channel.name + ' Live')}&sp=EgJAAQ%253D%253D`;
 }
 
 export interface CountryData {
@@ -85,7 +104,7 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
       { name: 'NDTV 24x7', lang: 'English', url: 'https://www.youtube.com/@NDTV', type: 'Private', scope: 'national' },
       { name: 'Aaj Tak', lang: 'Hindi', url: 'https://www.youtube.com/@aajtak', type: 'Private', scope: 'national' },
       { name: 'NDTV India', lang: 'Hindi', url: 'https://www.youtube.com/@NDTVIndia', type: 'Private', scope: 'national' },
-      { name: 'DD News', lang: 'Hindi', url: 'https://www.youtube.com/@DDNewslive', type: 'Public', scope: 'national' },
+      { name: 'DD News', lang: 'Hindi', url: 'https://www.youtube.com/@ddnews', type: 'Public', scope: 'national' },
       { name: 'WION', lang: 'English', url: 'https://www.youtube.com/@WIONews', type: 'Private', scope: 'national' },
       { name: 'ABP News', lang: 'Hindi', url: 'https://www.youtube.com/@ABPNews', type: 'Private', scope: 'national' },
       { name: 'India Today', lang: 'English', url: 'https://www.youtube.com/@IndiaToday', type: 'Private', scope: 'national' },
@@ -100,26 +119,26 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
     ],
     states: {
       'Andhra Pradesh': [
-        { name: 'TV9 Telugu', lang: 'Telugu', url: 'https://www.youtube.com/@TV9Telugu' },
-        { name: 'ABN Andhra Jyothi', lang: 'Telugu', url: 'https://www.youtube.com/@ABNTelugu' },
+        { name: 'TV9 Telugu', lang: 'Telugu', url: 'https://www.youtube.com/@TV9TeluguLive' },
+        { name: 'ABN Andhra Jyothi', lang: 'Telugu', url: 'https://www.youtube.com/@ABNAndhraJyothi' },
         { name: 'Sakshi TV', lang: 'Telugu', url: 'https://www.youtube.com/@SakshiTV' },
         { name: 'NTV Telugu', lang: 'Telugu', url: 'https://www.youtube.com/@NTVTelugu' },
       ],
       'Telangana': [
         { name: 'V6 News Telugu', lang: 'Telugu', url: 'https://www.youtube.com/@V6NewsTelugu' },
         { name: 'T News', lang: 'Telugu', url: 'https://www.youtube.com/@TNewsLive' },
-        { name: 'HMTV', lang: 'Telugu', url: 'https://www.youtube.com/@hmtvnewslive' },
+        { name: 'HMTV', lang: 'Telugu', url: 'https://www.youtube.com/@hmtvtelugu' },
       ],
       'Tamil Nadu': [
         { name: 'Thanthi TV', lang: 'Tamil', url: 'https://www.youtube.com/@ThanthiTV' },
-        { name: 'Puthiya Thalaimurai', lang: 'Tamil', url: 'https://www.youtube.com/@PuthiyaThalaimurai' },
-        { name: 'Sun News', lang: 'Tamil', url: 'https://www.youtube.com/@SunNews' },
+        { name: 'Puthiya Thalaimurai', lang: 'Tamil', url: 'https://www.youtube.com/@PuthiyaThalaimuraiTV' },
+        { name: 'Sun News', lang: 'Tamil', url: 'https://www.youtube.com/@Sunnewstamil' },
         { name: 'Polimer News', lang: 'Tamil', url: 'https://www.youtube.com/@PolimerNews' },
         { name: 'News18 Tamil Nadu', lang: 'Tamil', url: 'https://www.youtube.com/@News18TamilNadu' },
       ],
       'Kerala': [
         { name: 'Manorama News', lang: 'Malayalam', url: 'https://www.youtube.com/@manoramanews' },
-        { name: 'Mathrubhumi News', lang: 'Malayalam', url: 'https://www.youtube.com/@MathrubhumiNews' },
+        { name: 'Mathrubhumi News', lang: 'Malayalam', url: 'https://www.youtube.com/@mathrubhuminewslive' },
         { name: 'Asianet News', lang: 'Malayalam', url: 'https://www.youtube.com/@AsianetNews' },
         { name: 'MediaOne TV', lang: 'Malayalam', url: 'https://www.youtube.com/@MediaoneTVLive' },
         { name: 'Reporter TV', lang: 'Malayalam', url: 'https://www.youtube.com/@ReporterTV' },
@@ -127,25 +146,25 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
       'Karnataka': [
         { name: 'TV9 Kannada', lang: 'Kannada', url: 'https://www.youtube.com/@TV9Kannada' },
         { name: 'Public TV', lang: 'Kannada', url: 'https://www.youtube.com/@PublicTVKannada' },
-        { name: 'Suvarna News', lang: 'Kannada', url: 'https://www.youtube.com/@SuvarnaNewslive' },
+        { name: 'Suvarna News', lang: 'Kannada', url: 'https://www.youtube.com/@AsianetSuvarnaNews' },
       ],
       'Maharashtra': [
         { name: 'ABP Majha', lang: 'Marathi', url: 'https://www.youtube.com/@ABPMajha' },
-        { name: 'TV9 Marathi', lang: 'Marathi', url: 'https://www.youtube.com/@TV9Marathi' },
+        { name: 'TV9 Marathi', lang: 'Marathi', url: 'https://www.youtube.com/@TV9MarathiLive' },
         { name: 'Zee 24 Taas', lang: 'Marathi', url: 'https://www.youtube.com/@Zee24Taas' },
       ],
       'Gujarat': [
-        { name: 'TV9 Gujarati', lang: 'Gujarati', url: 'https://www.youtube.com/@TV9Gujarati' },
-        { name: 'ABP Asmita', lang: 'Gujarati', url: 'https://www.youtube.com/@ABPAsmita' },
+        { name: 'TV9 Gujarati', lang: 'Gujarati', url: 'https://www.youtube.com/results?search_query=TV9+Gujarati+Live' },
+        { name: 'ABP Asmita', lang: 'Gujarati', url: 'https://www.youtube.com/@abpasmitatv' },
       ],
       'West Bengal': [
         { name: 'ABP Ananda', lang: 'Bengali', url: 'https://www.youtube.com/@ABPAnanda' },
-        { name: 'TV9 Bangla', lang: 'Bengali', url: 'https://www.youtube.com/@TV9Bangla' },
+        { name: 'TV9 Bangla', lang: 'Bengali', url: 'https://www.youtube.com/@TV9BanglaLive' },
         { name: 'Zee 24 Ghanta', lang: 'Bengali', url: 'https://www.youtube.com/@Zee24Ghanta' },
       ],
       'Rajasthan': [
-        { name: 'Zee Rajasthan', lang: 'Hindi', url: 'https://www.youtube.com/@ZeeRajasthan' },
-        { name: 'First India News', lang: 'Hindi', url: 'https://www.youtube.com/@FirstIndiaNews' },
+        { name: 'Zee Rajasthan', lang: 'Hindi', url: 'https://www.youtube.com/@ZeeRajasthanNews' },
+        { name: 'First India News', lang: 'Hindi', url: 'https://www.youtube.com/results?search_query=First+India+News+Rajasthan+Live' },
       ],
       'Uttar Pradesh': [
         { name: 'News18 UP Uttarakhand', lang: 'Hindi', url: 'https://www.youtube.com/@News18UPUttarakhand' },
@@ -159,11 +178,11 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
       ],
       'Odisha': [
         { name: 'OTV (Odisha TV)', lang: 'Odia', url: 'https://www.youtube.com/@OTVKhabar' },
-        { name: 'Kanak News', lang: 'Odia', url: 'https://www.youtube.com/@KanakNewsOfficial' },
-        { name: 'Argus News', lang: 'Odia', url: 'https://www.youtube.com/@ArgusNewsOdisha' },
+        { name: 'Kanak News', lang: 'Odia', url: 'https://www.youtube.com/@KanakNewsOdisha' },
+        { name: 'Argus News', lang: 'Odia', url: 'https://www.youtube.com/@ArgusNews_in' },
       ],
       'Assam': [
-        { name: 'News Live', lang: 'Assamese', url: 'https://www.youtube.com/@NewsLive' },
+        { name: 'News Live', lang: 'Assamese', url: 'https://www.youtube.com/@NewsLiveAssam' },
         { name: 'Pratidin Time', lang: 'Assamese', url: 'https://www.youtube.com/@PratidinTime' },
       ],
       'Punjab': [
@@ -177,16 +196,16 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
         { name: 'Prudent Media Goa', lang: 'Konkani/English', url: 'https://www.youtube.com/@PrudentMedia' },
       ],
       'Manipur': [
-        { name: 'ISTV Live', lang: 'Manipuri', url: 'https://www.youtube.com/@ISTVNetwork' },
+        { name: 'ISTV Live', lang: 'Manipuri', url: 'https://www.youtube.com/results?search_query=ISTV+Live+Manipur+News' },
         { name: 'Impact TV Manipur', lang: 'Manipuri', url: 'https://www.youtube.com/@ImpactTVManipur' },
       ],
       'Jammu & Kashmir': [
-        { name: 'Greater Kashmir TV', lang: 'Urdu/Hindi', url: 'https://www.youtube.com/@GreaterKashmirTV' },
+        { name: 'Greater Kashmir TV', lang: 'Urdu/Hindi', url: 'https://www.youtube.com/results?search_query=Greater+Kashmir+News+Live' },
         { name: 'Kashmir Crown', lang: 'Urdu/Kashmiri', url: 'https://www.youtube.com/@KashmirCrown' },
       ],
       'Delhi': [
         { name: 'NDTV India (Delhi HQ)', lang: 'Hindi/English', url: 'https://www.youtube.com/@NDTVIndia' },
-        { name: 'Delhi Aaj Tak', lang: 'Hindi', url: 'https://www.youtube.com/@DelhiAajTak' },
+        { name: 'Aaj Tak Delhi NCR', lang: 'Hindi', url: 'https://www.youtube.com/@aajtak' },
       ],
       'Uttarakhand': [
         { name: 'News18 UP Uttarakhand', lang: 'Hindi', url: 'https://www.youtube.com/@News18UPUttarakhand' },
@@ -194,21 +213,21 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
       ],
       'Chhattisgarh': [
         { name: 'News18 MP Chhattisgarh', lang: 'Hindi', url: 'https://www.youtube.com/@News18MPCG' },
-        { name: 'IBC24 News', lang: 'Hindi', url: 'https://www.youtube.com/@iaborig' },
+        { name: 'IBC24 News', lang: 'Hindi', url: 'https://www.youtube.com/@IBC24InNews' },
       ],
       'Jharkhand': [
         { name: 'News18 Bihar Jharkhand', lang: 'Hindi', url: 'https://www.youtube.com/@News18BiharJharkhand' },
-        { name: 'Prabhat Khabar', lang: 'Hindi', url: 'https://www.youtube.com/@PrabhatKhabar' },
+        { name: 'Prabhat Khabar', lang: 'Hindi', url: 'https://www.youtube.com/@prabhatkhabartv' },
       ],
       'Himachal Pradesh': [
         { name: 'Divya Himachal', lang: 'Hindi', url: 'https://www.youtube.com/@DivyaHimachal' },
-        { name: 'HP News', lang: 'Hindi', url: 'https://www.youtube.com/@HPNewsTV' },
+        { name: 'Himachal News Live', lang: 'Hindi', url: 'https://www.youtube.com/results?search_query=Himachal+Pradesh+News+Live' },
       ],
       'Tripura': [
-        { name: 'Agartala News', lang: 'Bengali', url: 'https://www.youtube.com/@AgartalaNews' },
+        { name: 'Agartala News', lang: 'Bengali', url: 'https://www.youtube.com/results?search_query=Tripura+Agartala+News+Live' },
       ],
       'Meghalaya': [
-        { name: 'East Khasi Hills News', lang: 'English/Khasi', url: 'https://www.youtube.com/@MeghalayaNews' },
+        { name: 'East Khasi Hills News', lang: 'English/Khasi', url: 'https://www.youtube.com/results?search_query=Meghalaya+Shillong+News+Live' },
       ],
       'Mizoram': [
         { name: 'LPS Vision', lang: 'Mizo', url: 'https://www.youtube.com/@LPSVision' },
@@ -223,18 +242,18 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
         { name: 'Sikkim Chronicle', lang: 'English/Nepali', url: 'https://www.youtube.com/@SikkimChronicle' },
       ],
       'Ladakh': [
-        { name: 'Reach Ladakh', lang: 'English/Ladakhi', url: 'https://www.youtube.com/@ReachLadakh' },
+        { name: 'Reach Ladakh', lang: 'English/Ladakhi', url: 'https://www.youtube.com/results?search_query=Ladakh+Leh+News+Live' },
       ],
     },
   },
-  China: { continent: 'Asia', channels: [{ name: 'CGTN', lang: 'English/Chinese', url: 'https://www.youtube.com/@CGTNOfficial', type: 'State' }] },
+  China: { continent: 'Asia', channels: [{ name: 'CGTN', lang: 'English/Chinese', url: 'https://www.youtube.com/@cgtn', type: 'State' }] },
   Japan: { continent: 'Asia', channels: [{ name: 'NHK World-Japan', lang: 'English/Japanese', url: 'https://www.youtube.com/@NHKWORLDJAPAN', type: 'Public' }] },
   'S. Korea': { continent: 'Asia', channels: [{ name: 'KBS World', lang: 'Korean/English', url: 'https://www.youtube.com/@KBSWorldTV', type: 'Public' }] },
   Pakistan: { continent: 'Asia', channels: [{ name: 'ARY News', lang: 'Urdu', url: 'https://www.youtube.com/@ARYNEWSASIA', type: 'Private' }] },
-  Bangladesh: { continent: 'Asia', channels: [{ name: 'Jamuna TV', lang: 'Bengali', url: 'https://www.youtube.com/@JamunaTelevision', type: 'Private' }] },
+  Bangladesh: { continent: 'Asia', channels: [{ name: 'Jamuna TV', lang: 'Bengali', url: 'https://www.youtube.com/@JamunaTVbd', type: 'Private' }] },
   'Sri Lanka': { continent: 'Asia', channels: [{ name: 'Hiru News', lang: 'Sinhala', url: 'https://www.youtube.com/@HiruNews', type: 'Private' }] },
-  Nepal: { continent: 'Asia', channels: [{ name: 'Kantipur TV', lang: 'Nepali', url: 'https://www.youtube.com/@KantipurTV', type: 'Private' }] },
-  Myanmar: { continent: 'Asia', channels: [{ name: 'DVB News', lang: 'Burmese', url: 'https://www.youtube.com/@DVBTVNews', type: 'Independent' }] },
+  Nepal: { continent: 'Asia', channels: [{ name: 'Kantipur TV', lang: 'Nepali', url: 'https://www.youtube.com/@KantipurTVHD', type: 'Private' }] },
+  Myanmar: { continent: 'Asia', channels: [{ name: 'DVB News', lang: 'Burmese', url: 'https://www.youtube.com/@dvbtvenglish', type: 'Independent' }] },
   Thailand: { continent: 'Asia', channels: [{ name: 'Thai PBS', lang: 'Thai', url: 'https://www.youtube.com/@ThaiPBS', type: 'Public' }] },
   Vietnam: { continent: 'Asia', channels: [{ name: 'VTV News', lang: 'Vietnamese', url: 'https://www.youtube.com/@VTV24', type: 'State' }] },
   Indonesia: { continent: 'Asia', channels: [{ name: 'Kompas TV', lang: 'Indonesian', url: 'https://www.youtube.com/@KompasTV', type: 'Private' }] },
@@ -243,26 +262,26 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
   Singapore: { continent: 'Asia', channels: [{ name: 'CNA', lang: 'English', url: 'https://www.youtube.com/@channelnewsasia', type: 'State-linked' }] },
   Taiwan: { continent: 'Asia', channels: [{ name: 'TVBS News', lang: 'Mandarin', url: 'https://www.youtube.com/@TVBSNEWS01', type: 'Private' }] },
   Afghanistan: { continent: 'Asia', channels: [{ name: 'TOLOnews', lang: 'Dari/Pashto', url: 'https://www.youtube.com/@TOLOnews', type: 'Private' }] },
-  Cambodia: { continent: 'Asia', channels: [{ name: 'Fresh News', lang: 'Khmer', url: 'https://www.youtube.com/@FreshNewsAsia', type: 'Private' }] },
+  Cambodia: { continent: 'Asia', channels: [{ name: 'Fresh News', lang: 'Khmer', url: 'https://www.youtube.com/results?search_query=Cambodia+Fresh+News+Live', type: 'Private' }] },
   Mongolia: { continent: 'Asia', channels: [{ name: 'MNB World', lang: 'Mongolian', url: 'https://www.youtube.com/@MNBworld', type: 'Public' }] },
 
   // ========== MIDDLE EAST ==========
   Qatar: { continent: 'Middle East', channels: [{ name: 'Al Jazeera English', lang: 'English/Arabic', url: 'https://www.youtube.com/@AlJazeeraEnglish', type: 'State-funded' }] },
   'United Arab Emirates': { continent: 'Middle East', channels: [{ name: 'Al Arabiya', lang: 'Arabic', url: 'https://www.youtube.com/@AlArabiya', type: 'Private' }] },
-  'Saudi Arabia': { continent: 'Middle East', channels: [{ name: 'Al Ekhbariya', lang: 'Arabic', url: 'https://www.youtube.com/@alekhbariya', type: 'State' }] },
+  'Saudi Arabia': { continent: 'Middle East', channels: [{ name: 'Al Ekhbariya', lang: 'Arabic', url: 'https://www.youtube.com/@alekhbariyatv', type: 'State' }] },
   Turkey: { continent: 'Middle East', channels: [{ name: 'TRT World', lang: 'English/Turkish', url: 'https://www.youtube.com/@trtworld', type: 'Public' }] },
-  Iran: { continent: 'Middle East', channels: [{ name: 'Press TV', lang: 'English/Persian', url: 'https://www.youtube.com/@PressTVEN', type: 'State' }] },
-  Israel: { continent: 'Middle East', channels: [{ name: 'i24NEWS', lang: 'English/Hebrew', url: 'https://www.youtube.com/@i24NEWSen', type: 'Private' }] },
-  Iraq: { continent: 'Middle East', channels: [{ name: 'Rudaw Media', lang: 'Kurdish/Arabic', url: 'https://www.youtube.com/@RudawMedia', type: 'Private' }] },
+  Iran: { continent: 'Middle East', channels: [{ name: 'Press TV', lang: 'English/Persian', url: 'https://www.youtube.com/@PressTV', type: 'State' }] },
+  Israel: { continent: 'Middle East', channels: [{ name: 'i24NEWS', lang: 'English/Hebrew', url: 'https://www.youtube.com/@i24NEWS_EN', type: 'Private' }] },
+  Iraq: { continent: 'Middle East', channels: [{ name: 'Rudaw Media', lang: 'Kurdish/Arabic', url: 'https://www.youtube.com/results?search_query=Rudaw+News+Live', type: 'Private' }] },
   Lebanon: { continent: 'Middle East', channels: [{ name: 'Al Mayadeen', lang: 'Arabic', url: 'https://www.youtube.com/@AlMayadeen', type: 'Private' }] },
   Jordan: { continent: 'Middle East', channels: [{ name: 'Roya News', lang: 'Arabic', url: 'https://www.youtube.com/@RoyaNews', type: 'Private' }] },
 
   // ========== EUROPE ==========
   'United Kingdom': { continent: 'Europe', channels: [{ name: 'BBC News', lang: 'English', url: 'https://www.youtube.com/@BBCNews', type: 'Public' }] },
   Germany: { continent: 'Europe', channels: [{ name: 'DW News', lang: 'English/German', url: 'https://www.youtube.com/@dwnews', type: 'Public' }] },
-  France: { continent: 'Europe', channels: [{ name: 'France 24', lang: 'French/English', url: 'https://www.youtube.com/@FRANCE24English', type: 'Public' }] },
+  France: { continent: 'Europe', channels: [{ name: 'France 24', lang: 'French/English', url: 'https://www.youtube.com/@FRANCE24', type: 'Public' }] },
   Italy: { continent: 'Europe', channels: [{ name: 'Rai News 24', lang: 'Italian', url: 'https://www.youtube.com/@rainews', type: 'Public' }] },
-  Spain: { continent: 'Europe', channels: [{ name: 'RTVE Noticias', lang: 'Spanish', url: 'https://www.youtube.com/@rtve', type: 'Public' }] },
+  Spain: { continent: 'Europe', channels: [{ name: 'RTVE Noticias', lang: 'Spanish', url: 'https://www.youtube.com/@rtvenoticias', type: 'Public' }] },
   Netherlands: { continent: 'Europe', channels: [{ name: 'NOS', lang: 'Dutch', url: 'https://www.youtube.com/@NOS', type: 'Public' }] },
   Poland: { continent: 'Europe', channels: [{ name: 'TVN24', lang: 'Polish', url: 'https://www.youtube.com/@tvn24', type: 'Private' }] },
   Ukraine: { continent: 'Europe', channels: [{ name: 'NEXTA Live', lang: 'Ukrainian', url: 'https://www.youtube.com/@nextalive', type: 'Independent' }] },
@@ -272,20 +291,20 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
   Switzerland: { continent: 'Europe', channels: [{ name: 'SRF News', lang: 'German/French', url: 'https://www.youtube.com/@SRF', type: 'Public' }] },
   Ireland: { continent: 'Europe', channels: [{ name: 'RTE News', lang: 'English/Irish', url: 'https://www.youtube.com/@rtenews', type: 'Public' }] },
   Romania: { continent: 'Europe', channels: [{ name: 'Digi24', lang: 'Romanian', url: 'https://www.youtube.com/@Digi24HD', type: 'Private' }] },
-  Serbia: { continent: 'Europe', channels: [{ name: 'N1 Info', lang: 'Serbian', url: 'https://www.youtube.com/@N1info', type: 'Private' }] },
+  Serbia: { continent: 'Europe', channels: [{ name: 'N1 Info', lang: 'Serbian', url: 'https://www.youtube.com/@N1infoTV', type: 'Private' }] },
 
   // ========== NORTH AMERICA ==========
   'United States of America': { continent: 'N. America', channels: [{ name: 'Associated Press', lang: 'English', url: 'https://www.youtube.com/@AssociatedPress', type: 'Wire Service' }] },
   Canada: { continent: 'N. America', channels: [{ name: 'CBC News', lang: 'English/French', url: 'https://www.youtube.com/@cbcnews', type: 'Public' }] },
-  Mexico: { continent: 'N. America', channels: [{ name: 'Televisa Noticias', lang: 'Spanish', url: 'https://www.youtube.com/@televisanoticias', type: 'Private' }] },
-  Cuba: { continent: 'N. America', channels: [{ name: 'CubaTV', lang: 'Spanish', url: 'https://www.youtube.com/@CanalCaribeTV', type: 'State' }] },
+  Mexico: { continent: 'N. America', channels: [{ name: 'Televisa Noticias', lang: 'Spanish', url: 'https://www.youtube.com/@nmas', type: 'Private' }] },
+  Cuba: { continent: 'N. America', channels: [{ name: 'CubaTV', lang: 'Spanish', url: 'https://www.youtube.com/@CanalCaribe', type: 'State' }] },
   Jamaica: { continent: 'N. America', channels: [{ name: 'TVJ News', lang: 'English', url: 'https://www.youtube.com/@televisionjamaica', type: 'Private' }] },
-  Guatemala: { continent: 'N. America', channels: [{ name: 'Prensa Libre', lang: 'Spanish', url: 'https://www.youtube.com/@prensalibregt', type: 'Private' }] },
+  Guatemala: { continent: 'N. America', channels: [{ name: 'Prensa Libre', lang: 'Spanish', url: 'https://www.youtube.com/@PrensaLibreTV', type: 'Private' }] },
   Honduras: { continent: 'N. America', channels: [{ name: 'HCH Television', lang: 'Spanish', url: 'https://www.youtube.com/@HCHTelevisionDigital', type: 'Private' }] },
-  'Costa Rica': { continent: 'N. America', channels: [{ name: 'Teletica', lang: 'Spanish', url: 'https://www.youtube.com/@Teletica', type: 'Private' }] },
+  'Costa Rica': { continent: 'N. America', channels: [{ name: 'Teletica', lang: 'Spanish', url: 'https://www.youtube.com/@Teletica7', type: 'Private' }] },
   Panama: { continent: 'N. America', channels: [{ name: 'TVN Panama', lang: 'Spanish', url: 'https://www.youtube.com/@tvnpanama', type: 'Private' }] },
   'Dominican Rep.': { continent: 'N. America', channels: [{ name: 'Noticias SIN', lang: 'Spanish', url: 'https://www.youtube.com/@NoticiasSIN', type: 'Private' }] },
-  Haiti: { continent: 'N. America', channels: [{ name: 'Radio Tele Metropole', lang: 'French/Creole', url: 'https://www.youtube.com/@metropolehaiti', type: 'Private' }] },
+  Haiti: { continent: 'N. America', channels: [{ name: 'Radio Tele Metropole', lang: 'French/Creole', url: 'https://www.youtube.com/@TeleMetropole', type: 'Private' }] },
   'El Salvador': { continent: 'N. America', channels: [{ name: 'TCS Noticias', lang: 'Spanish', url: 'https://www.youtube.com/@TCSNoticias', type: 'Private' }] },
 
   // ========== SOUTH AMERICA ==========
@@ -294,10 +313,10 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
   Colombia: { continent: 'S. America', channels: [{ name: 'Caracol Noticias', lang: 'Spanish', url: 'https://www.youtube.com/@NoticiasCaracol', type: 'Private' }] },
   Chile: { continent: 'S. America', channels: [{ name: 'CNN Chile', lang: 'Spanish', url: 'https://www.youtube.com/@CNNChile', type: 'Private' }] },
   Peru: { continent: 'S. America', channels: [{ name: 'RPP Noticias', lang: 'Spanish', url: 'https://www.youtube.com/@RPPNoticias', type: 'Private' }] },
-  Venezuela: { continent: 'S. America', channels: [{ name: 'Globovision', lang: 'Spanish', url: 'https://www.youtube.com/@Globovision', type: 'Private' }] },
+  Venezuela: { continent: 'S. America', channels: [{ name: 'Globovision', lang: 'Spanish', url: 'https://www.youtube.com/@globovisionvideos', type: 'Private' }] },
   Ecuador: { continent: 'S. America', channels: [{ name: 'Ecuavisa', lang: 'Spanish', url: 'https://www.youtube.com/@ecuavisa', type: 'Private' }] },
-  Uruguay: { continent: 'S. America', channels: [{ name: 'Telenoche', lang: 'Spanish', url: 'https://www.youtube.com/@Canal4Uruguay', type: 'Private' }] },
-  Paraguay: { continent: 'S. America', channels: [{ name: 'ABC TV', lang: 'Spanish', url: 'https://www.youtube.com/@ABCTVParaguay', type: 'Private' }] },
+  Uruguay: { continent: 'S. America', channels: [{ name: 'Telenoche', lang: 'Spanish', url: 'https://www.youtube.com/@Canal4_Uy', type: 'Private' }] },
+  Paraguay: { continent: 'S. America', channels: [{ name: 'ABC TV', lang: 'Spanish', url: 'https://www.youtube.com/results?search_query=ABC+TV+Paraguay+En+Vivo', type: 'Private' }] },
   Bolivia: { continent: 'S. America', channels: [{ name: 'Red UNO', lang: 'Spanish', url: 'https://www.youtube.com/@redunobolivia', type: 'Private' }] },
 
   // ========== AFRICA ==========
@@ -305,10 +324,10 @@ export const NEWS_CHANNELS: NewsChannelsMap = {
   'South Africa': { continent: 'Africa', channels: [{ name: 'eNCA', lang: 'English', url: 'https://www.youtube.com/@eNCA', type: 'Private' }] },
   Kenya: { continent: 'Africa', channels: [{ name: 'Citizen TV Kenya', lang: 'English/Swahili', url: 'https://www.youtube.com/@citizentvkenya', type: 'Private' }] },
   Egypt: { continent: 'Africa', channels: [{ name: 'CBC Egypt', lang: 'Arabic', url: 'https://www.youtube.com/@CBCeGYPT', type: 'Private' }] },
-  Morocco: { continent: 'Africa', channels: [{ name: '2M TV', lang: 'Arabic/French', url: 'https://www.youtube.com/@2MMaroc', type: 'Public' }] },
+  Morocco: { continent: 'Africa', channels: [{ name: '2M TV', lang: 'Arabic/French', url: 'https://www.youtube.com/@2mtvmaroc', type: 'Public' }] },
   Algeria: { continent: 'Africa', channels: [{ name: 'Echorouk News', lang: 'Arabic', url: 'https://www.youtube.com/@EchoroukNews', type: 'Private' }] },
-  Ghana: { continent: 'Africa', channels: [{ name: 'Joy News', lang: 'English', url: 'https://www.youtube.com/@JoyNewsOnTV', type: 'Private' }] },
-  Ethiopia: { continent: 'Africa', channels: [{ name: 'Fana TV', lang: 'Amharic', url: 'https://www.youtube.com/@FanaBroadcasting', type: 'State' }] },
+  Ghana: { continent: 'Africa', channels: [{ name: 'Joy News', lang: 'English', url: 'https://www.youtube.com/results?search_query=JoyNews+Ghana+Live', type: 'Private' }] },
+  Ethiopia: { continent: 'Africa', channels: [{ name: 'Fana TV', lang: 'Amharic', url: 'https://www.youtube.com/@FanaTV', type: 'State' }] },
   Tanzania: { continent: 'Africa', channels: [{ name: 'ITV Tanzania', lang: 'Swahili', url: 'https://www.youtube.com/@ITVTanzania', type: 'Private' }] },
   Uganda: { continent: 'Africa', channels: [{ name: 'NTV Uganda', lang: 'English', url: 'https://www.youtube.com/@NTVUganda', type: 'Private' }] },
 

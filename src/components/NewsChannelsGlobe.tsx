@@ -7,6 +7,8 @@ import {
   CONTINENT_COLORS,
   getCountryName,
   getTotalChannelCount,
+  getChannelHomeUrl,
+  getChannelLiveUrl,
   type Channel,
 } from '@/data/newsChannels';
 import { Search, X, ChevronDown, ChevronUp, Play, Pause, RotateCcw } from 'lucide-react';
@@ -226,57 +228,69 @@ export default function NewsChannelsGlobe() {
     return result;
   }, [showIndia, searchQuery]);
 
-  const ChannelCard = ({ channel, compact = false }: { channel: Channel; compact?: boolean }) => (
-    <div className="group flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.06]">
-      <div className="min-w-0 flex-1">
-        <div className={`font-semibold text-foreground ${compact ? 'text-[13px]' : 'text-sm'}`}>
-          {channel.name}
+  const ChannelCard = ({ channel, compact = false }: { channel: Channel; compact?: boolean }) => {
+    const homeUrl = getChannelHomeUrl(channel);
+    const liveUrl = getChannelLiveUrl(channel);
+    return (
+      <div
+        onClick={() => window.open(liveUrl, '_blank', 'noopener,noreferrer')}
+        className="group cursor-pointer flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.06] hover:border-red-500/30"
+        title={`Click to auto-launch ${channel.name} Live Stream`}
+      >
+        <div className="min-w-0 flex-1">
+          <div className={`flex items-center gap-2 font-semibold text-foreground group-hover:text-red-400 transition-colors ${compact ? 'text-[13px]' : 'text-sm'}`}>
+            <span className="truncate">{channel.name}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-400 border border-red-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              LIVE
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+            <span>{channel.lang}</span>
+            {channel.type && (
+              <>
+                <span className="text-white/20">|</span>
+                <span
+                  className={
+                    channel.type === 'Public'
+                      ? 'text-primary'
+                      : channel.type === 'State' || channel.type === 'State-funded'
+                      ? 'text-yellow-400'
+                      : channel.type === 'Digital' || channel.type === 'Independent'
+                      ? 'text-emerald-400'
+                      : 'text-pink-400'
+                  }
+                >
+                  {channel.type}
+                </span>
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span>{channel.lang}</span>
-          {channel.type && (
-            <>
-              <span className="text-white/20">|</span>
-              <span
-                className={
-                  channel.type === 'Public'
-                    ? 'text-primary'
-                    : channel.type === 'State' || channel.type === 'State-funded'
-                    ? 'text-yellow-400'
-                    : channel.type === 'Digital' || channel.type === 'Independent'
-                    ? 'text-emerald-400'
-                    : 'text-pink-400'
-                }
-              >
-                {channel.type}
-              </span>
-            </>
-          )}
+        <div className="ml-3 flex shrink-0 flex-col sm:flex-row items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <a
+            href={homeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+            title="Go to Official Channel Page"
+          >
+            Home
+          </a>
+          <a
+            href={liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-md bg-red-600/90 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]"
+            title="Auto-Trigger Active Live Stream"
+          >
+            <Play className="h-3 w-3 fill-white" />
+            Live
+          </a>
         </div>
       </div>
-      <div className="ml-3 flex shrink-0 flex-col sm:flex-row items-center gap-2">
-        <a
-          href={channel.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
-          title="Go to Channel Home Page"
-        >
-          Home
-        </a>
-        <a
-          href={channel.url.includes('youtube.com/@') ? `${channel.url}/live` : channel.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-md bg-red-600/90 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]"
-          title="Watch Live Stream"
-        >
-          <Play className="h-3 w-3 fill-white" />
-          Live
-        </a>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div ref={containerRef} className="flex h-full w-full flex-col overflow-hidden">

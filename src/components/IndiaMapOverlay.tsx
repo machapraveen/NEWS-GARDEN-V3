@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
 import { ArrowLeft, Search, X, Play, Tv, Newspaper, ExternalLink } from 'lucide-react';
-import { NEWS_CHANNELS, type Channel } from '@/data/newsChannels';
+import { NEWS_CHANNELS, getChannelHomeUrl, getChannelLiveUrl, type Channel } from '@/data/newsChannels';
 import { fetchStateNews, type StateNewsItem } from '@/lib/api/news';
 
 // District-level GeoJSON with modern boundaries (includes Telangana, Ladakh, etc.)
@@ -197,23 +197,49 @@ export default function IndiaMapOverlay({ onClose }: IndiaMapOverlayProps) {
     );
   }, [selectedState, searchQuery]);
 
-  const ChannelCard = ({ channel }: { channel: Channel }) => (
-    <div className="group flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.08]">
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-foreground">{channel.name}</div>
-        <div className="text-[11px] text-muted-foreground">{channel.lang}</div>
-      </div>
-      <a
-        href={channel.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ml-3 flex shrink-0 items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-700"
+  const ChannelCard = ({ channel }: { channel: Channel }) => {
+    const homeUrl = getChannelHomeUrl(channel);
+    const liveUrl = getChannelLiveUrl(channel);
+    return (
+      <div
+        onClick={() => window.open(liveUrl, '_blank', 'noopener,noreferrer')}
+        className="group cursor-pointer flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.08] hover:border-red-500/30"
+        title={`Click to auto-launch ${channel.name} Live Stream`}
       >
-        <Play className="h-3 w-3 fill-white" />
-        YouTube
-      </a>
-    </div>
-  );
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground group-hover:text-red-400 transition-colors">
+            <span className="truncate">{channel.name}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-400 border border-red-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              LIVE
+            </span>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">{channel.lang}</div>
+        </div>
+        <div className="ml-3 flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <a
+            href={homeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+            title="Go to Official Channel Page"
+          >
+            Home
+          </a>
+          <a
+            href={liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex shrink-0 items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-700 shadow-[0_0_10px_rgba(220,38,38,0.4)]"
+            title="Auto-Trigger Active Live Stream"
+          >
+            <Play className="h-3 w-3 fill-white" />
+            Live
+          </a>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div

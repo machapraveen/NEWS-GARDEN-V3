@@ -8,7 +8,7 @@
 - Supabase account association confirmed for the API keys: `1437`
 - Organization ID: `vercel_icfg_DbzV2YPrghSM37BmUJHXusyf`
 
-This project belongs to the **P2** account, and both the newly updated Gemini and GNews API keys are associated with account **1437**. The project reference uniquely identifies the Supabase project; do not confuse it with the account email or username.
+This project belongs to the **P2** account, and both the newly updated Gemini and GNews API keys are associated with account **P8**. The project reference uniquely identifies the Supabase project; do not confuse it with the account email or username.
 
 ## GNews API key location
 

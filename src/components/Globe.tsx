@@ -341,9 +341,10 @@ export default function Globe({
   useEffect(() => {
     const globe = globeRef.current;
     if (globe) {
-      globe.controls().autoRotate = autoRotate;
+      globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.45;
-      globe.controls().enableZoom = true;
+      // Disable default wheel zoom so natural page scrolling works smoothly to reach Dispatches & Verify News below the fold
+      globe.controls().enableZoom = false;
       globe.pointOfView({ altitude: 2.3 }, 1000);
 
       // Enhance globe material with ocean specular reflections
@@ -388,7 +389,7 @@ export default function Globe({
                 blending: THREE.AdditiveBlending,
               });
               const mesh = new THREE.Mesh(cloudsGeo, cloudsMat);
-              mesh.visible = showClouds;
+              mesh.visible = true;
               scene.add(mesh);
               cloudsMeshRef.current = mesh;
 
@@ -409,14 +410,40 @@ export default function Globe({
 
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (cloudsMeshRef.current && globeRef.current?.scene) {
-        globeRef.current.scene().remove(cloudsMeshRef.current);
+      if (cloudsMeshRef.current && globe?.scene) {
+        globe.scene().remove(cloudsMeshRef.current);
         cloudsMeshRef.current.geometry.dispose();
         (cloudsMeshRef.current.material as THREE.Material).dispose();
         cloudsMeshRef.current = null;
       }
     };
   }, []);
+
+  // Keep OrbitControls wheel zoom disabled on theme switches, and allow Ctrl/Cmd + Wheel for 3D globe zoom
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (globe && globe.controls()) {
+      globe.controls().enableZoom = false;
+    }
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (!globeRef.current) return;
+        const pov = globeRef.current.pointOfView();
+        const delta = e.deltaY > 0 ? 0.25 : -0.25;
+        globeRef.current.pointOfView(
+          { ...pov, altitude: Math.min(3.8, Math.max(1.15, (pov.altitude || 2.0) + delta)) },
+          180
+        );
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, [theme]);
 
   // Sync clouds visibility with state toggle
   useEffect(() => {

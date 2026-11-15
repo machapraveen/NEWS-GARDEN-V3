@@ -349,6 +349,17 @@ const Index = () => {
             Channels
           </Button>
         </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="glass border-primary/30 text-primary hover:bg-primary/10"
+          onClick={() =>
+            document.getElementById("verify-news-section")?.scrollIntoView({ behavior: "smooth" })
+          }
+        >
+          <Shield className="w-4 h-4 mr-1.5" />
+          Verify News
+        </Button>
       </div>
 
       {/* Live indicator + Refresh */}
@@ -451,27 +462,34 @@ const Index = () => {
           />
         )}
 
-        {/* Scroll hint */}
+        {/* Scroll hint — interactive smooth-scroll trigger */}
         {!selectedMarker && !selectedCountry && articles.length > 0 && (
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1 animate-bounce pointer-events-none">
-            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-widest">
+          <button
+            type="button"
+            onClick={() =>
+              document.getElementById("dispatches-section")?.scrollIntoView({ behavior: "smooth" })
+            }
+            className="group absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1.5 animate-bounce pointer-events-auto cursor-pointer rounded-full border border-white/10 bg-slate-950/60 hover:bg-slate-900/80 hover:border-primary/40 px-4 py-2 backdrop-blur-md transition-all shadow-lg"
+            title="Scroll down to Trending Dispatches & News Verifier"
+          >
+            <span className="text-[10px] font-semibold text-muted-foreground group-hover:text-primary uppercase tracking-widest transition-colors">
               Scroll down for dispatches
             </span>
             <svg
-              className="w-4 h-4 text-muted-foreground/40"
+              className="w-4 h-4 text-primary/70 group-hover:text-primary transition-colors"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </svg>
-          </div>
+          </button>
         )}
       </div>
 
       {/* Below-the-fold content sections */}
       {articles.length > 0 && (
-        <div className="relative z-10 bg-background">
+        <div id="dispatches-section" className="relative z-10 bg-background">
           {/* Trending Stories */}
           <section className="max-w-6xl mx-auto px-4 py-12">
             <div className="flex items-center gap-2 mb-6">
@@ -607,7 +625,7 @@ const Index = () => {
           )}
 
           {/* News Verification Tool */}
-          <section className="max-w-6xl mx-auto px-4 py-12 border-t border-white/[0.06]">
+          <section id="verify-news-section" className="max-w-6xl mx-auto px-4 py-12 border-t border-white/[0.06]">
             <div className="flex flex-col items-center text-center mb-6">
               <Shield className="w-6 h-6 text-primary mb-2" />
               <h2 className="font-display text-base font-bold tracking-wider text-primary">
@@ -615,7 +633,7 @@ const Index = () => {
               </h2>
               <p className="text-xs text-muted-foreground mt-1 max-w-md">
                 Paste any news headline or article text to check if it's real or fake using our AI
-                ensemble (RoBERTa + Gemini)
+                ensemble (RoBERTa)
               </p>
             </div>
             <div className="flex justify-center">

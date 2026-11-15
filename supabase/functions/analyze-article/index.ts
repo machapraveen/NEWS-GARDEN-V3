@@ -167,11 +167,8 @@ function analyzeCredibilityLocal(title: string, content: string, sourceName: str
     redFlags.push('Excessive punctuation in headline');
   }
 
-  // 8. Text length check — very short articles are less trustworthy
-  if (content.length < 100) {
-    score -= 5;
-    redFlags.push('Very short article — insufficient content for verification');
-  } else if (content.length > 500) {
+  // 8. Text length check — reward longer detailed articles without penalizing headline claims
+  if (content.length > 500) {
     score += 3; // Longer, well-written articles tend to be more credible
   }
 
@@ -289,8 +286,10 @@ async function callGeminiCredibility(title: string, content: string, apiKey: str
   redFlags: string[];
 } | null> {
   const claimText = `${title} ${content}`.trim();
+  const currentIsoDate = new Date().toISOString();
   const prompt = `You are an authoritative real-time news fact-checking and debunking intelligence AI.
-Validate this news claim/headline against real-world verifiable facts and credible journalism:
+Current Date & Time (UTC): ${currentIsoDate}
+Validate this news claim/headline against real-world verifiable facts and credible journalism up to ${currentIsoDate}:
 
 Claim: "${claimText}"
 
