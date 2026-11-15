@@ -106,9 +106,9 @@ export default function GlobeControls({
   };
 
   return (
-    <div className="fixed top-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-[740px] max-w-[96vw] z-40 space-y-2">
+    <div className="fixed top-12 sm:top-14 xl:top-4 inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[min(740px,94vw)] z-40 space-y-1.5 sm:space-y-2">
       {/* ── Top Bar: Search, 195 Countries Directory & Waves Radar ── */}
-      <div className="glass rounded-2xl p-2 flex items-center gap-2 border border-white/[0.12] shadow-xl backdrop-blur-xl bg-black/50">
+      <div className="glass rounded-2xl p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2 border border-white/[0.12] shadow-xl backdrop-blur-xl bg-black/50">
         <div ref={searchContainerRef} className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input

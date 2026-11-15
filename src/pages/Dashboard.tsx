@@ -218,10 +218,10 @@ export default function Dashboard() {
   // ── Loading skeleton ──────────────────────────────────────
   if (loading && articles.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96" />
+          <Skeleton className="h-8 w-full max-w-64" />
+          <Skeleton className="h-4 w-full max-w-96" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
           </div>
@@ -259,8 +259,8 @@ export default function Dashboard() {
 
   // ── Render ────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 sm:space-y-8">
 
         {/* ───── HEADER ───── */}
         <header>

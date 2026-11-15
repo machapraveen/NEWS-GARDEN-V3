@@ -321,81 +321,83 @@ const Index = () => {
   }, [articles]);
 
   return (
-    <div className="relative w-full min-h-screen bg-background">
-      {/* Header */}
-      <div className="fixed top-4 left-4 z-50 flex items-center gap-3">
-        <h1 className="font-display text-lg font-bold tracking-wider text-primary text-glow">
+    <div className="relative w-full min-h-screen bg-background overflow-x-hidden">
+      {/* Header — Top Left */}
+      <div className="fixed top-3 left-3 sm:top-4 sm:left-4 z-50 flex items-center gap-2 sm:gap-3 pointer-events-none">
+        <h1 className="font-display text-sm sm:text-lg font-bold tracking-wider text-primary text-glow pointer-events-auto">
           NEWS GARDEN
         </h1>
         {loading && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground glass px-2.5 py-1 rounded-full">
-            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-            <span>Syncing global news...</span>
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground glass px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full">
+            <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
+            <span className="hidden xs:inline sm:inline">Syncing global news...</span>
           </div>
         )}
       </div>
 
-      {/* Navigation links */}
-      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2">
-        <Link to="/dashboard">
-          <Button variant="outline" size="sm" className="glass border-border/30">
-            <BarChart3 className="w-4 h-4 mr-1.5" />
-            Dashboard
-          </Button>
-        </Link>
-        <Link to="/channels">
-          <Button variant="outline" size="sm" className="glass border-border/30">
-            <Globe2 className="w-4 h-4 mr-1.5" />
-            Channels
-          </Button>
-        </Link>
-        <Button
-          variant="outline"
-          size="sm"
-          className="glass border-primary/30 text-primary hover:bg-primary/10"
-          onClick={() =>
-            document.getElementById("verify-news-section")?.scrollIntoView({ behavior: "smooth" })
-          }
-        >
-          <Shield className="w-4 h-4 mr-1.5" />
-          Verify News
-        </Button>
-      </div>
-
-      {/* Live indicator + Refresh */}
-      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
+      {/* Live indicator + Refresh — Top Right (never overlaps bottom Globe Visual Suite dock) */}
+      <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50 flex items-center gap-1.5 sm:gap-2">
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 glass border-border/30"
+          className="h-7 w-7 glass border-border/30 shrink-0"
           onClick={handleManualRefresh}
           disabled={loading}
           title="Refresh news"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
         </Button>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground glass px-3 py-1.5 rounded-full border border-white/[0.08]">
+        <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground glass px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border border-white/[0.08] max-w-[62vw] sm:max-w-none truncate">
           {noNewUpdates ? (
             <>
-              <CheckCircle2 className="w-3 h-3 text-primary" />
-              <span className="text-primary font-medium">UP TO DATE</span>
+              <CheckCircle2 className="w-3 h-3 text-primary shrink-0" />
+              <span className="text-primary font-medium shrink-0">UP TO DATE</span>
             </>
           ) : (
             <>
-              <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
-              <span>LIVE</span>
+              <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse shrink-0" />
+              <span className="shrink-0">LIVE</span>
             </>
           )}
-          <span className="mx-0.5">&middot;</span>
-          <span>
+          <span className="mx-0.5 shrink-0">&middot;</span>
+          <span className="truncate">
             {articles.length} articles
             {selectedRegion !== "All" ? ` (${selectedRegion})` : ""}
             {selectedCategory ? ` · ${selectedCategory}` : ""}
           </span>
           {(lastRefresh || lastChangedAt) && (
-            <span className="text-muted-foreground/60 ml-1">&middot; {getRefreshText()}</span>
+            <span className="text-muted-foreground/60 ml-1 hidden md:inline shrink-0">
+              &middot; {getRefreshText()}
+            </span>
           )}
         </div>
+      </div>
+
+      {/* Navigation links — Bottom Left */}
+      <div className="fixed bottom-3 left-3 sm:bottom-4 sm:left-4 z-40 flex items-center gap-1.5 sm:gap-2 flex-wrap max-w-[calc(100vw-1.5rem)]">
+        <Link to="/dashboard">
+          <Button variant="outline" size="sm" className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs glass border-border/30">
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-1.5" />
+            Dashboard
+          </Button>
+        </Link>
+        <Link to="/channels">
+          <Button variant="outline" size="sm" className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs glass border-border/30">
+            <Globe2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-1.5" />
+            Channels
+          </Button>
+        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs glass border-primary/30 text-primary hover:bg-primary/10"
+          onClick={() =>
+            document.getElementById("verify-news-section")?.scrollIntoView({ behavior: "smooth" })
+          }
+        >
+          <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-1.5" />
+          Verify News
+        </Button>
       </div>
 
       {/* Globe Section — full viewport */}
@@ -462,28 +464,30 @@ const Index = () => {
           />
         )}
 
-        {/* Scroll hint — interactive smooth-scroll trigger */}
+        {/* Scroll hint — mathematically centered flex container so bounce transform never shifts horizontal center */}
         {!selectedMarker && !selectedCountry && articles.length > 0 && (
-          <button
-            type="button"
-            onClick={() =>
-              document.getElementById("dispatches-section")?.scrollIntoView({ behavior: "smooth" })
-            }
-            className="group absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1.5 animate-bounce pointer-events-auto cursor-pointer rounded-full border border-white/10 bg-slate-950/60 hover:bg-slate-900/80 hover:border-primary/40 px-4 py-2 backdrop-blur-md transition-all shadow-lg"
-            title="Scroll down to Trending Dispatches & News Verifier"
-          >
-            <span className="text-[10px] font-semibold text-muted-foreground group-hover:text-primary uppercase tracking-widest transition-colors">
-              Scroll down for dispatches
-            </span>
-            <svg
-              className="w-4 h-4 text-primary/70 group-hover:text-primary transition-colors"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          <div className="absolute bottom-24 sm:bottom-16 inset-x-0 z-30 flex justify-center pointer-events-none px-4">
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("dispatches-section")?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="group pointer-events-auto cursor-pointer flex flex-col items-center justify-center gap-1 rounded-full border border-white/15 bg-slate-950/75 hover:bg-slate-900/90 hover:border-primary/50 px-4 sm:px-5 py-2 backdrop-blur-xl transition-all shadow-[0_8px_30px_rgba(0,0,0,0.6)]"
+              title="Scroll down to Trending Dispatches & News Verifier"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          </button>
+              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-200 group-hover:text-primary uppercase tracking-widest text-center transition-colors">
+                Scroll down for dispatches
+              </span>
+              <svg
+                className="w-4 h-4 text-primary animate-bounce"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 

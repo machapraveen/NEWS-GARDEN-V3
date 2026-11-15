@@ -234,4 +234,39 @@ test.describe('News Garden — Part 2: Pages & Features', () => {
       await expect(canvas.first()).toBeVisible();
     }
   });
+
+  // TC-17: Multi-device responsiveness (320px, 375px, 768px, 1024px, 1440px) & exact centering of Scroll Down button
+  test('TC-17: 100% responsive across all viewports with centered scroll button and zero horizontal overflow', async ({ page }) => {
+    const viewports = [
+      { width: 320, height: 568 },
+      { width: 375, height: 812 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+      { width: 1440, height: 900 },
+    ];
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('text=/LIVE|UP TO DATE/', { timeout: 30000 });
+
+    for (const vp of viewports) {
+      await page.setViewportSize(vp);
+      await page.waitForTimeout(200);
+
+      // Verify zero horizontal overflow
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      expect(overflow).toBe(false);
+
+      // Verify "Scroll down for dispatches" button is mathematically centered within 2px
+      const scrollBtn = page.locator('button:has-text("Scroll down for dispatches")');
+      await expect(scrollBtn).toBeVisible();
+      const box = await scrollBtn.boundingBox();
+      expect(box).not.toBeNull();
+      if (box) {
+        const btnCenter = box.x + box.width / 2;
+        const viewportCenter = vp.width / 2;
+        expect(Math.abs(btnCenter - viewportCenter)).toBeLessThanOrEqual(2);
+      }
+    }
+  });
 });

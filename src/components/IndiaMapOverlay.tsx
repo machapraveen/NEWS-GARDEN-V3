@@ -105,15 +105,17 @@ export default function IndiaMapOverlay({ onClose }: IndiaMapOverlayProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Responsive sizing
+  // Responsive sizing across mobile, tablet & desktop
   useEffect(() => {
     function updateSize() {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        const panelW = selectedState ? 380 : 0;
+        const isDesktop = rect.width >= 768;
+        const panelW = isDesktop && selectedState ? 380 : 0;
+        const padX = rect.width < 640 ? 16 : 40;
         setMapSize({
-          width: Math.max(400, rect.width - panelW - 40),
-          height: Math.max(400, rect.height - 80),
+          width: Math.max(280, rect.width - panelW - padX),
+          height: Math.max(300, rect.height - 80),
         });
       }
     }
@@ -257,24 +259,24 @@ export default function IndiaMapOverlay({ onClose }: IndiaMapOverlayProps) {
       }}
     >
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-4">
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between flex-wrap gap-2 px-3 sm:px-6 py-3 sm:py-4">
         <button
           onClick={handleClose}
-          className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-muted-foreground backdrop-blur-sm transition-colors hover:bg-white/10 hover:text-foreground"
+          className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/15 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-muted-foreground backdrop-blur-sm transition-colors hover:bg-white/10 hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           Back to Globe
         </button>
-        <div className="flex items-center gap-3">
-          <span className="text-[22px] font-bold text-foreground">India</span>
-          <span className="rounded-full bg-[#FF6B35]/20 px-3 py-1 text-xs font-bold text-[#FF6B35]">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="text-base sm:text-[22px] font-bold text-foreground">India</span>
+          <span className="rounded-full bg-[#FF6B35]/20 px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold text-[#FF6B35]">
             {stateNames.length} States
           </span>
-          <span className="rounded-full bg-primary/20 px-3 py-1 text-xs font-bold text-primary">
+          <span className="rounded-full bg-primary/20 px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold text-primary">
             {(NEWS_CHANNELS.India?.channels?.length || 0) + Object.values(NEWS_CHANNELS.India?.states || {}).reduce((s, c) => s + c.length, 0)} Channels
           </span>
         </div>
-        <div className="text-xs text-muted-foreground">Click a state to see its news channels</div>
+        <div className="hidden lg:block text-xs text-muted-foreground">Click a state to see its news channels</div>
       </div>
 
       {/* Map area */}
@@ -391,9 +393,9 @@ export default function IndiaMapOverlay({ onClose }: IndiaMapOverlayProps) {
           )}
         </div>
 
-        {/* State Details Panel */}
+        {/* State Details Panel — full-width overlay drawer on mobile, docked sidebar on tablet/desktop */}
         {selectedState && (
-          <div className="w-[380px] shrink-0 animate-in slide-in-from-right overflow-y-auto border-l border-white/[0.08] bg-[rgba(10,22,40,0.95)] duration-300">
+          <div className="fixed inset-x-0 bottom-0 top-14 z-30 w-full md:static md:w-[380px] md:z-auto shrink-0 animate-in slide-in-from-right overflow-y-auto border-l border-white/[0.08] bg-[rgba(10,22,40,0.97)] backdrop-blur-xl duration-300">
             {/* State Header */}
             <div
               className="border-b border-white/[0.06] p-5"

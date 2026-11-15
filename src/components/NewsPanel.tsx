@@ -505,17 +505,17 @@ export default function NewsPanel({ marker, onClose, articles }: NewsPanelProps)
           </div>
 
           {/* Ratio Legend */}
-          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 font-mono">
+          <div className="flex items-center justify-between flex-wrap gap-1.5 text-[10px] text-slate-400 mt-1.5 font-mono">
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               {hubStats.posPct}% Optimistic ({hubStats.pos})
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
               {hubStats.neuPct}% Balanced ({hubStats.neu})
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
               {hubStats.negPct}% Critical ({hubStats.neg})
             </span>
           </div>

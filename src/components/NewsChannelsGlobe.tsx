@@ -51,14 +51,16 @@ export default function NewsChannelsGlobe() {
 
   const totalChannels = useMemo(() => getTotalChannelCount(), []);
 
-  // Responsive globe sizing
+  // Responsive globe sizing across all mobile, tablet & desktop viewports
   useEffect(() => {
     function updateSize() {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        const panelWidth = selectedCountry ? 360 : 0;
-        const available = Math.min(rect.width - panelWidth - 40, rect.height - 40);
-        setGlobeSize(Math.max(300, Math.min(600, available)));
+        const isDesktop = rect.width >= 768;
+        const panelWidth = isDesktop && selectedCountry ? 360 : 0;
+        const padding = rect.width < 640 ? 20 : 40;
+        const available = Math.min(rect.width - panelWidth - padding, rect.height - padding - 40);
+        setGlobeSize(Math.max(240, Math.min(600, available)));
       }
     }
     updateSize();
@@ -410,10 +412,10 @@ export default function NewsChannelsGlobe() {
           )}
 
           {/* Continent Legend */}
-          <div className="absolute bottom-4 right-4 flex max-w-[200px] flex-wrap gap-1.5">
+          <div className="absolute bottom-3 left-3 sm:left-auto sm:bottom-4 sm:right-4 flex max-w-[220px] flex-wrap gap-1.5 pointer-events-none">
             {Object.entries(CONTINENT_COLORS).map(([name, color]) => (
               <div key={name} className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <div className="h-2 w-2 rounded-sm" style={{ background: color }} />
+                <div className="h-2 w-2 rounded-sm shrink-0" style={{ background: color }} />
                 {name}
               </div>
             ))}
@@ -421,16 +423,16 @@ export default function NewsChannelsGlobe() {
 
           {/* Instruction overlay */}
           {!selectedCountry && (
-            <div className="pointer-events-none absolute top-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-[11px] text-muted-foreground">
+            <div className="pointer-events-none absolute top-3 sm:top-4 left-3 sm:left-1/2 sm:-translate-x-1/2 rounded-full bg-black/60 px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-[11px] text-muted-foreground max-w-[calc(100%-130px)] sm:max-w-none truncate">
               Drag to rotate | Click colored countries to explore channels
             </div>
           )}
 
           {/* Globe controls */}
-          <div className="absolute top-4 right-4 flex gap-2">
+          <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex gap-1.5 sm:gap-2">
             <button
               onClick={() => setAutoRotate(!autoRotate)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold transition-colors ${
                 autoRotate
                   ? 'border-primary/30 bg-primary/20 text-primary'
                   : 'border-white/15 bg-white/5 text-muted-foreground hover:bg-white/10'
@@ -444,7 +446,7 @@ export default function NewsChannelsGlobe() {
                 setRotation([-78, -20, 0]);
                 setAutoRotate(false);
               }}
-              className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white/10"
+              className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-muted-foreground transition-colors hover:bg-white/10"
               title="Reset to India"
             >
               <RotateCcw className="h-3 w-3" />
@@ -452,9 +454,9 @@ export default function NewsChannelsGlobe() {
           </div>
         </div>
 
-        {/* Side Panel */}
+        {/* Side Panel — full-width overlay drawer on mobile, docked sidebar on tablet/desktop */}
         {selectedCountry && NEWS_CHANNELS[selectedCountry] && (
-          <div className="w-[360px] shrink-0 animate-in slide-in-from-right overflow-y-auto border-l border-white/[0.08] bg-[rgba(13,27,42,0.95)] duration-300">
+          <div className="fixed inset-x-0 bottom-0 top-[57px] z-40 w-full md:static md:w-[360px] md:z-auto shrink-0 animate-in slide-in-from-right overflow-y-auto border-l border-white/[0.08] bg-[rgba(13,27,42,0.97)] backdrop-blur-xl duration-300">
             {/* Country Header */}
             <div
               className="border-b border-white/[0.06] p-5"
@@ -567,17 +569,17 @@ export default function NewsChannelsGlobe() {
       </div>
 
       {/* Bottom Stats Bar */}
-      <div className="flex items-center justify-between border-t border-white/[0.06] bg-black/20 px-4 py-2">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+      <div className="flex items-center justify-between flex-wrap gap-2 border-t border-white/[0.06] bg-black/20 px-3 sm:px-4 py-2">
+        <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary shrink-0" />
           <span className="font-medium text-primary">LIVE DIRECTORY</span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] text-muted-foreground">
           <span>{Object.keys(NEWS_CHANNELS).length} Countries</span>
           <span className="text-white/20">|</span>
           <span>{totalChannels}+ Channels</span>
-          <span className="text-white/20">|</span>
-          <span>{Object.keys(NEWS_CHANNELS.India?.states || {}).length} Indian States</span>
+          <span className="text-white/20 hidden xs:inline sm:inline">|</span>
+          <span className="hidden xs:inline sm:inline">{Object.keys(NEWS_CHANNELS.India?.states || {}).length} Indian States</span>
         </div>
       </div>
 

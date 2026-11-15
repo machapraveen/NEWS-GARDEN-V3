@@ -54,8 +54,8 @@ export default function CountryPulseCard({
   }, [countryArticles]);
 
   return (
-    <div className="fixed bottom-6 left-4 sm:left-6 z-40 max-w-sm sm:max-w-md w-full animate-in slide-in-from-bottom duration-300">
-      <div className="glass rounded-2xl p-4 sm:p-5 border border-white/[0.12] shadow-2xl backdrop-blur-2xl bg-black/40 text-foreground relative overflow-hidden">
+    <div className="fixed bottom-16 sm:bottom-16 left-3 right-3 sm:left-6 sm:right-auto z-40 sm:max-w-md sm:w-full max-h-[70dvh] overflow-y-auto animate-in slide-in-from-bottom duration-300">
+      <div className="glass rounded-2xl p-3.5 sm:p-5 border border-white/[0.12] shadow-2xl backdrop-blur-2xl bg-black/75 text-foreground relative overflow-hidden">
         {/* Subtle ambient accent glow based on dominant sentiment */}
         <div
           className="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-30 pointer-events-none"

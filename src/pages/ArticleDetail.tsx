@@ -130,8 +130,8 @@ export default function ArticleDetail() {
   const geminiVerdict = credibility?.models?.gemini?.verdict;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Nav */}
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to Globe

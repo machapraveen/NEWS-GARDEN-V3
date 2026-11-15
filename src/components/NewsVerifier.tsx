@@ -166,7 +166,7 @@ export default function NewsVerifier() {
 
           {/* ── Status Banner ── */}
           <div
-            className={`flex items-center justify-between p-3.5 rounded-xl border mb-4 ${
+            className={`flex items-center justify-between flex-wrap sm:flex-nowrap gap-2.5 p-3 sm:p-3.5 rounded-xl border mb-4 ${
               isHoax
                 ? "bg-red-500/15 border-red-500/40 text-red-300 shadow-[0_0_25px_rgba(239,68,68,0.2)]"
                 : isVerified
@@ -219,8 +219,8 @@ export default function NewsVerifier() {
           </div>
 
           {/* ── Dual Truth vs Falsehood Percentage Spectrum ── */}
-          <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3.5 mb-4 space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold">
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 mb-4 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-1.5 text-[11px] sm:text-xs font-semibold">
               <div className="flex items-center gap-1.5 text-emerald-400">
                 <ShieldCheck className="w-4 h-4" />
                 <span>Truth Probability: {result.truthPercentage}%</span>

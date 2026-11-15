@@ -108,18 +108,20 @@ export default function GlobeVisualControls({
   totalArticles,
   isSidebarOpen = false,
 }: GlobeVisualControlsProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 768 : true
+  );
 
   return (
     <div
-      className={`fixed bottom-6 z-40 flex flex-col items-end gap-2 select-none transition-all duration-300 ease-in-out ${
+      className={`fixed bottom-14 sm:bottom-4 z-40 flex flex-col items-end gap-2 select-none transition-all duration-300 ease-in-out ${
         isSidebarOpen
-          ? "right-4 sm:right-[500px]"
-          : "right-4 sm:right-6"
+          ? "hidden lg:flex lg:right-[500px]"
+          : "right-3 sm:right-5"
       }`}
     >
       {/* Floating dock */}
-      <div className="glass rounded-2xl border border-white/[0.12] bg-black/65 backdrop-blur-2xl shadow-2xl p-2.5 max-w-sm sm:max-w-md w-auto text-foreground transition-all duration-300">
+      <div className="glass rounded-2xl border border-white/[0.12] bg-black/75 backdrop-blur-2xl shadow-2xl p-2 sm:p-2.5 max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[62dvh] sm:max-h-none overflow-y-auto w-auto text-foreground transition-all duration-300">
         {/* Dock Header & Toggle */}
         <div className="flex items-center justify-between gap-3 px-1 pb-1.5 border-b border-white/[0.08]">
           <div className="flex items-center gap-2">
